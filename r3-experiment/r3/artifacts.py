@@ -17,6 +17,10 @@ def sha256(path):
 
 
 def download_models(spec, folder):
+    # AutoDL's proxy supports regular HTTPS but the Xet CAS download failed.
+    # Keep the failed Xet partial files untouched; use a separate HTTP cache.
+    os.environ['HF_HUB_DISABLE_XET']='1'
+    os.environ['HF_HUB_DOWNLOAD_TIMEOUT']='120'
     from huggingface_hub import HfApi, snapshot_download
     api = HfApi(endpoint='https://huggingface.co')
     target = folder/'models'
@@ -36,7 +40,7 @@ def download_models(spec, folder):
                   (n.endswith(weight_ext) or n.endswith(('.json', '.model', '.txt', '.tiktoken')))]
         if not any(n.endswith(weight_ext) for n in wanted):
             raise Blocked('No frozen model weights: '+key)
-        dest = target/key/revision
+        dest = target/key/revision/'https'
         sizes = {f.rfilename: f.size for f in info.siblings if f.rfilename in wanted}
         needed = sum(size or 0 for name, size in sizes.items() if not (dest/name).exists())
         if shutil.disk_usage(folder).free < needed+10*1024**3:

@@ -37,7 +37,7 @@ def main():
         env=folder/'environment/artifacts-venv'
         if not (env/'bin/python').exists():step('create_artifact_environment',[sys.executable,'-m','venv','--system-site-packages',str(env)])
         python=str(env/'bin/python')
-        step('install_artifact_dependencies',[python,'-m','pip','install','huggingface-hub==0.36.0'])
+        step('install_artifact_dependencies',[python,'-m','pip','install','--index-url','https://pypi.org/simple','huggingface-hub==0.36.0'])
         with (folder/'environment/artifact_pip_freeze.txt').open('w') as out:
             subprocess.run([python,'-m','pip','freeze'],stdout=out,check=True)
         step('download_model_weights',[python,'-m','r3.artifacts','--spec',a.spec,'--root',a.root])

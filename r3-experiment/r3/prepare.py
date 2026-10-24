@@ -45,7 +45,10 @@ def sources(spec,folder):
                     if not target.is_relative_to(dest.resolve()):raise Blocked('Unsafe link path')
                     target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(archive.extractfile(member).read())
             write(dest/'r3_download_receipt.json',{'repository':repo,'commit':sha,'archive_sha256':digest(blob),'unresolved_symlinks':unresolved})
-        files={p.relative_to(dest).as_posix():digest(p.read_bytes()) for p in sorted(dest.rglob('*')) if p.is_file()}
+        for relative,expected in previous.get(name,{}).get('files',{}).items():
+            if not (dest/relative).is_file() or digest((dest/relative).read_bytes())!=expected:
+                raise Blocked('Previously locked source changed: '+name+'/'+relative)
+        files={p.relative_to(dest).as_posix():digest(p.read_bytes()) for p in sorted(dest.rglob('*')) if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc'}
         lock[name]={'repository':repo,'revision':sha,'path':str(dest.resolve()),'files':files}
         write(folder/'manifests/source_lock.partial.json',lock)
         print(json.dumps({'source':name,'revision':sha,'files':len(files)}),flush=True)

@@ -2,7 +2,7 @@
 
 这是下一轮实验的**任务书和辅助检查包**，不是已经实现五方法的GPU runner。
 
-2026-10-24 开始开发，已加入版本锁定、评分、抽样、采样与任务注册基础模块，14项CPU检查通过；完整原生推理runner尚未完成。详细状态见[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)。第三台服务器已按官方network_turbo方式连通Hugging Face，尚未启动正式实验。
+2026-10-24 开发中：16项CPU检查通过，目标GPU的作者选择函数与采样组件检查通过，代码已同步私有GitHub仓库与第三台服务器。模型下载和隔离环境准备已启动；完整原生推理、长轨迹认证与正式实验尚未完成。详细状态见[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)。
 
 ## 阅读与执行顺序
 

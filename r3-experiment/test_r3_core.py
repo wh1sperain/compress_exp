@@ -6,10 +6,30 @@ from r3.common import seed
 from r3.build_jobs import build
 from r3.manifest import TASKS,select,split_labels
 from r3.rescue import masks
+from r3.native_sources import visionzip_arguments
+from r3.analyze import paired,intervals
+from r3.common import Blocked
 from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_repeat_pairing_precedes_bootstrap(self):
+        rows=[]
+        for repeat,delta in enumerate([0,300,600]):
+            for condition,length in [('Full',100),('PriorTR25',100+delta)]:
+                rows.append(dict(model='qwen8',stage='main',uid='u',task='DocVQA',image_sha256='i',
+                                 repeat=repeat,condition=condition,seed=repeat,prompt_sha256='p',
+                                 reasoning_tokens=length,output_cap_reached=False,score=1))
+        value=paired(rows,'qwen8','PriorTR25','reasoning_tokens')[('DocVQA','i')]
+        self.assertEqual(value[0],300)
+        self.assertAlmostEqual(value[1],2/3)
+        with self.assertRaises(Blocked):paired(rows[:-1],'qwen8','PriorTR25','reasoning_tokens')
+        with self.assertRaises(Blocked):paired(rows+[rows[0]],'qwen8','PriorTR25','reasoning_tokens')
+    def test_visionzip_public_budget(self):
+        for k,d,c in [(288,243,45),(144,122,22)]:
+            self.assertEqual(visionzip_arguments(k),dict(dominant=d,contextual=c))
+            self.assertEqual(d+c,k)
+        with self.assertRaises(ValueError):visionzip_arguments(576)
     def test_required_scores(self):
         for a,b,x in [('11 a.m.','11 a.m.',1),('3 Million Users','3 million',.6),('34 Million','3 million',.9)]:
             p,_=extract('FINAL ANSWER: '+a);self.assertAlmostEqual(nls(p,[b]),x)
