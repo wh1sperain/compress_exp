@@ -22,16 +22,17 @@ def main():
     write(status,state)
     try:
         subprocess.run([sys.executable,'-m','r3.environments','--folder',str(folder)],check=True)
-        while True:
-            state.update(stage='waiting_for_verified_weights',updated_at=time.time());write(status,state)
-            bootstrap=read(folder/'telemetry/bootstrap_state.json')
-            if bootstrap['stage']=='failed':raise Blocked('Artifact preparation failed; original receipt retained')
-            weights=folder/'manifests/model_weights_lock.json'
-            if weights.exists() and {'llava7','mini8','clip336'}<=set(read(weights)):break
-            time.sleep(30)
         environments=read(folder/'environment/native_environments.json')
         methods=['Full','PriorTR50','PriorTR25','AgilePruner50','AgilePruner25','VisionZip50','VisionZip25','FastV50','FastV25','MiniNative']
         for method in methods:
+            required={'mini8' if method=='MiniNative' else 'llava7','clip336'}
+            while True:
+                state.update(stage='waiting_for_verified_weights',method=method,required=sorted(required),updated_at=time.time());write(status,state)
+                weights=folder/'manifests/model_weights_lock.json'
+                if weights.exists() and required<=set(read(weights)):break
+                bootstrap=read(folder/'telemetry/bootstrap_state.json')
+                if bootstrap['stage']=='failed':raise Blocked('Required artifacts unavailable after preparation failure; original receipt retained')
+                time.sleep(30)
             state.update(stage='native_synthetic_smoke',method=method,updated_at=time.time());write(status,state)
             env='mini' if method=='MiniNative' else 'fastv' if method.startswith('FastV') else 'llava'
             subprocess.run([environments[env]['python'],'-m','r3.native_smoke','--folder',str(folder),'--method',method,'--out',str(folder/'tests'/('smoke-'+method+'.json'))],check=True)

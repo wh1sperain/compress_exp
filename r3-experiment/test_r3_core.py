@@ -9,10 +9,20 @@ from r3.rescue import masks
 from r3.native_sources import visionzip_arguments
 from r3.analyze import paired,intervals
 from r3.common import Blocked
+from r3.artifacts import verify_cached,sha256
+import tempfile
 from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_cache_receipt_detects_corruption(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'model.safetensors';p.write_bytes(b'valid-test-fixture')
+            entry={'path':d,'files':{p.name:{'bytes':p.stat().st_size,'sha256':sha256(p)}}}
+            self.assertTrue(verify_cached(entry))
+            p.write_bytes(b'changed-test-bytes')
+            with self.assertRaises(Blocked):verify_cached(entry)
+            with self.assertRaises(Blocked):verify_cached({'path':d,'files':{}})
     def test_repeat_pairing_precedes_bootstrap(self):
         rows=[]
         for repeat,delta in enumerate([0,300,600]):

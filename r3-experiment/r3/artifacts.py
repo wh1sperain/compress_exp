@@ -16,6 +16,19 @@ def sha256(path):
     return h.hexdigest()
 
 
+def verify_cached(entry):
+    """A receipt is reusable only when every recorded file still hashes exactly."""
+    if not entry.get('files') or not any(n.endswith(('.bin','.safetensors')) for n in entry['files']):
+        raise Blocked('Incomplete cached model receipt')
+    base=Path(entry['path']).resolve()
+    for name,info in entry['files'].items():
+        path=(base/name).resolve()
+        if not path.is_relative_to(base) or not path.is_file():raise Blocked('Missing/invalid cached artifact')
+        if path.stat().st_size!=info['bytes'] or sha256(path)!=info['sha256']:
+            raise Blocked('Previously verified model changed: '+name)
+    return True
+
+
 def download_models(spec, folder):
     # AutoDL's proxy supports regular HTTPS but the Xet CAS download failed.
     # Keep the failed Xet partial files untouched; use a separate HTTP cache.
@@ -27,10 +40,18 @@ def download_models(spec, folder):
     lock_path = folder/'manifests/model_weights_lock.json'
     locked = read(lock_path) if lock_path.exists() else {}
     config_lock = read(folder/'manifests/model_config_lock.json')
-    items = {k: dict(v) for k, v in spec['models'].items()}
-    items['clip336'] = {'model_id': 'openai/clip-vit-large-patch14-336', 'revision': None}
+    items = {'clip336': {'model_id': 'openai/clip-vit-large-patch14-336', 'revision': None}}
+    items.update({k: dict(v) for k, v in spec['models'].items()})
     for key, model in items.items():
         revision = locked.get(key, {}).get('revision') or config_lock.get(key, {}).get('revision') or model.get('revision')
+        write(folder/'telemetry/artifact_status.json', {'stage':'checking_metadata','model':key,'revision':revision,'production_started':False})
+        if key in locked:
+            expected_revision=config_lock.get(key,{}).get('revision') or model.get('revision')
+            if locked[key]['model_id']!=model['model_id'] or (expected_revision and locked[key]['revision']!=expected_revision):
+                raise Blocked('Cached model identity differs from frozen config: '+key)
+            verify_cached(locked[key])
+            print('model_artifacts_reverified_without_network '+key,flush=True)
+            continue
         info = api.model_info(model['model_id'], revision=revision, files_metadata=True)
         revision = info.sha
         names = [f.rfilename for f in info.siblings]
