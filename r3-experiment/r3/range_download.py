@@ -33,8 +33,10 @@ def transfer(url,target,progress):
             info=read(receipt);data=p.read_bytes()
             if len(data)!=end-start+1 or hashlib.sha256(data).hexdigest()!=info['sha256']:raise Blocked('Corrupt stored chunk')
             return len(data)
-        with requests.get(url,headers={'Range':f'bytes={start}-{end}','If-Range':validator[1],'Accept-Encoding':'identity'},timeout=(20,120)) as r:
-            if r.status_code!=206:raise Blocked('Unhonored range')
+        with requests.get(url,headers={'Range':f'bytes={start}-{end}','If-Range':validator[1],'Accept-Encoding':'identity'},stream=True,timeout=(20,120)) as r:
+            if r.status_code!=206:
+                write(parts/('failed-response-'+str(time.time_ns())+'.json'),dict(start=start,end=end,status=r.status_code,content_range=r.headers.get('Content-Range')))
+                raise Blocked('Unhonored range HTTP '+str(r.status_code))
             validate_range(r.headers,start,end,total,validator);data=r.content
         if len(data)!=end-start+1:raise Blocked('Short chunk')
         temp=p.with_name(p.name+'.partial-'+str(time.time_ns()));temp.write_bytes(data);temp.rename(p)

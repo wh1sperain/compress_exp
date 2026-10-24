@@ -70,3 +70,5 @@
 2026-10-24 11:07：ChartQA官方源1250题/625图完成（固定044eabfc306abfe9340c5741f0093aefc5973d06），GQA仍正常下载问题包。目标Qwen处理器实测size shortest_edge262144/longest_edge4194304、patch16/merge2。新增CPU原生输入审计：图像哈希核对、实际processor展开prompt、grid/token数一致性、8192门槛、处理器/tokenizer/template/prompt来源哈希、无答案审计输出；不生成答案，不预抽样。22项CPU测试通过。A/C输入审计与正式runner、长轨迹门槛仍未完成。
 
 2026-10-24 11:22：ChartQA全部1250题Qwen原生输入审计退出0。GQA长连接在163577856字节后ChunkedEncodingError，原partial与失败回执保留。新增4路8MiB HTTP Range传输：服务器206/Content-Range/ETag或Last-Modified验证、分段SHA、不可变成功块、完整组装SHA及双份空间预留；不做无界重试，不改来源/采样。24项CPU测试通过，含模拟传输组装与拒绝错误字节范围/变化来源。
+
+2026-10-24 11:37：GQA分段返回非206，保留失败；定向小范围与8MiB含If-Range探针证实206且ETag未变，网络不稳定。增强异常HTTP回执与stream模式，避免异常整包响应被读入内存；显式恢复，未无界自动重试。新增LLaVA原生pad336/CLIP14 patch/tokenizer输入审计，检查单图占位、实际像素张量和Full展开2048上限；Mini真实预融合审计仍待实现。24项CPU/语法检查通过。
