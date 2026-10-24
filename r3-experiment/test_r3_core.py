@@ -11,10 +11,32 @@ from r3.analyze import paired,intervals
 from r3.common import Blocked
 from r3.artifacts import verify_cached,sha256
 import tempfile
+from unittest.mock import patch
+from types import SimpleNamespace
+from r3.compat import llava_forward_with_cache_position
 from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_cache_position_bridge_preserves_arguments(self):
+        calls=[];cache=object();position=object();embedding=object()
+        class FakeLlama:
+            @staticmethod
+            def forward(self,**kw):calls.append(kw);return kw
+        class FakeModel:
+            def prepare_inputs_labels_for_multimodal(self,*args):
+                self.prepared=args
+                return None,position,'mask',cache,embedding,None
+        model=FakeModel();cursor=object()
+        with patch.dict('sys.modules',{'transformers':SimpleNamespace(LlamaForCausalLM=FakeLlama)}):
+            result=llava_forward_with_cache_position(model,input_ids='ids',images='pixels',cache_position=cursor)
+            self.assertIs(result['cache_position'],cursor)
+            self.assertIs(result['past_key_values'],cache)
+            self.assertIs(result['position_ids'],position)
+            self.assertIs(result['inputs_embeds'],embedding)
+            self.assertEqual(model.prepared[0],'ids')
+            result=llava_forward_with_cache_position(model,inputs_embeds=embedding,cache_position=cursor)
+            self.assertIs(result['inputs_embeds'],embedding)
     def test_cache_receipt_detects_corruption(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/'model.safetensors';p.write_bytes(b'valid-test-fixture')

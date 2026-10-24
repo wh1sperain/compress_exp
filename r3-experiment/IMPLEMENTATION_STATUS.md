@@ -47,6 +47,8 @@
 
 ## 下一步
 
+2026-10-24 09:07检查：Mini与CLIP分片下载校验已完成，Qwen4B仍在下载。已逐项读取7个模型smoke回执：Full、PriorTR50/25、AgilePruner50/25、VisionZip50/25权重加载无missing/unexpected/mismatched keys，层输入数量符合预算，短合成生成完成；这不是完整模型等价门槛。FastV50在外层LLaVA.forward收到cache_position时报TypeError。新增显式兼容包装，将cache_position原样传给作者LlamaForCausalLM；不丢参数、不修改作者磁盘源码。CPU18项通过。新检查输出进入唯一attempt目录，旧成功/失败/prefix记录不覆盖；恢复只检查FastVFull、FastV50/25、MiniNative。
+
 2026-10-24 08:52定时检查：LLaVA7B与Qwen8B分片下载及校验已成功；Mini元数据请求遇到HTTP503，原准备和等待进程失败记录保留。新增已下载模型逐文件重新校验后无网络复用（损坏即拒绝，不覆盖），CLIP优先准备，各方法仅等待自身所需模型；17项CPU测试通过。基础设施恢复不会生成或重抽研究答案，正式实验仍未启动。
 
 完成模型与CLIP下载校验，运行作者完整模型检查，继续Qwen路径、输入清单及正式runner开发；完成各门槛后再启动正式研究任务。代码迭代同步仓库及不可变服务器release。M60还需要真实双人标注与一致性记录，不伪造第二标注员。

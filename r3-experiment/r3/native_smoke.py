@@ -34,6 +34,8 @@ def activate(folder,method):
 
 
 def run(folder,method,out):
+    if out.exists() or out.with_suffix('.prefix.json').exists():
+        raise Blocked('Existing smoke attempt must remain immutable; choose a new output path')
     paths=activate(folder,method)
     import torch
     from PIL import Image
@@ -92,9 +94,13 @@ def run(folder,method,out):
         pixels=pixels.unsqueeze(0)
     if method.startswith('FastV'):
         import functools
+        import types
+        from .compat import llava_forward_with_cache_position
+        model.forward=types.MethodType(llava_forward_with_cache_position,model)
         start=int((ids[0]==constants.IMAGE_TOKEN_INDEX).nonzero()[0])
         if not hasattr(model.model,'fastv_forward'):raise Blocked('Frozen FastV author forward absent')
-        model.model.forward=functools.partial(model.model.fastv_forward,fastv_config=dict(fastv_k=2,fastv_r=1-keep/576,image_token_start_index=start,image_token_length=576))
+        if method!='FastVFull':
+            model.model.forward=functools.partial(model.model.fastv_forward,fastv_config=dict(fastv_k=2,fastv_r=1-keep/576,image_token_start_index=start,image_token_length=576))
     layer_shapes={};handles=[]
     def hook(index):
         def fn(module,args,kwargs):
