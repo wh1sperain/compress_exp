@@ -2,9 +2,10 @@ import ast
 import re
 import unittest
 from pathlib import Path
-from r3.common import Blocked
+from r3.common import Blocked,digest
 from r3.scoring import edit_distance
-from r3.task_scoring import score_prediction,score_record,mathvista_normalize,chart_relaxed,legacy_v2
+from r3.task_scoring import (score_prediction,score_record,mathvista_normalize,chart_relaxed,legacy_v2,
+                            gqa_exact,GQA_EVALUATOR_REVISION,GQA_EVALUATOR_PATH,GQA_EVALUATOR_SHA256)
 
 class TaskScoringTests(unittest.TestCase):
     def test_document_required_regressions(self):
@@ -40,8 +41,30 @@ class TaskScoringTests(unittest.TestCase):
                 expected=scope['normalize_extracted_answer'](value,options,'multi_choice' if options else 'free_form',kind,precision,ignore_empty_extractions=True)
                 self.assertEqual(mathvista_normalize(value,options,kind,precision),None if value=='' else expected)
 
-    def test_gqa_unverified_blocks(self):
-        with self.assertRaises(Blocked):score_prediction('yes',{'task':'GQA-balanced-val'},{'answer':'yes'})
+    def test_gqa_exact_without_vqa_or_submission_normalization(self):
+        row={'task':'GQA-balanced-val'}
+        for pred,gold,expected in [('yes','yes',1),('YES','yes',0),('yes.','yes',0),
+                                   ('two','2',0),('the cat','cat',0),(' yes ','yes',0),
+                                   ('gray','grey',0),(None,'yes',0)]:
+            result=score_prediction(pred,row,{'answer':gold})
+            self.assertEqual(result['score'],expected)
+            self.assertEqual(result['normalized_prediction'],pred)
+            self.assertEqual(result['evaluator_sha256'],GQA_EVALUATOR_SHA256)
+        with self.assertRaises(Blocked):score_prediction('yes',row,{'answers':['yes','no']})
+
+    def test_gqa_frozen_evaluator_expression_parity(self):
+        path=(Path(__file__).parent/'.local-preparation/runs/visual-compression-r3/vendor/PriorTR'
+              /GQA_EVALUATOR_REVISION/GQA_EVALUATOR_PATH)
+        if not path.exists():self.skipTest('frozen source snapshot absent')
+        self.assertEqual(digest(path.read_bytes()),GQA_EVALUATOR_SHA256)
+        tree=ast.parse(path.read_text(encoding='utf-8'))
+        nodes=[node for node in ast.walk(tree) if isinstance(node,ast.Assign)
+               and any(isinstance(t,ast.Name) and t.id=='correct' for t in node.targets)]
+        self.assertEqual(len(nodes),1)
+        expression=compile(ast.Expression(body=nodes[0].value),str(path),'eval')
+        for predicted in ['yes','YES','yes.',' yes ','2','two','the cat','cat']:
+            for gold in ['yes','2','cat']:
+                self.assertEqual(gqa_exact(predicted,gold),eval(expression,{'predicted':predicted,'gold':gold}))
 
     def test_final_region_and_shadow(self):
         row={'uid':'d1','task':'DocVQA'};record={'uid':'d1','job_key':'j','final_text':'FINAL ANSWER: 11 a.m.'}

@@ -59,17 +59,16 @@ def run(folder):
             execute('qwen4-'+condition,'qwen','r3.session_probe',['--folder',str(folder),'--model','qwen4',
                 '--condition',condition,'--out',str(attempt/('qwen4-'+condition)),
                 '--supplemental-audit',supplemental['out'],'--supplemental-status',supplemental['status_path']])
-        if execute('qwen-probe-unit-tests','qwen','unittest',['test_qwen_independent'])==0:
-            for method in ('Full','PriorTR50','PriorTR25'):
-                paths={side:attempt/('qwen-'+method+'-'+side) for side in ('author','local')}
-                codes=[]
-                for side,path in paths.items():
-                    codes.append(execute(path.name,'qwen','r3.qwen_independent_probe',
-                        ['--folder',str(folder),'--candidate',str(candidate),'--method',method,'--side',side,'--out',str(path)]))
-                if not any(codes):
-                    execute('qwen-'+method+'-compare','qwen','r3.qwen_independent_probe',
-                        ['--compare',str(paths['author']),str(paths['local']),'--out',str(attempt/('qwen-'+method+'-comparison.json'))],
-                        comparison_receipt=attempt/('qwen-'+method+'-comparison.json'))
+        for method in ('Full','PriorTR50','PriorTR25'):
+            paths={side:attempt/('qwen-'+method+'-'+side) for side in ('author','local')}
+            codes=[]
+            for side,path in paths.items():
+                codes.append(execute(path.name,'qwen','r3.qwen_independent_probe',
+                    ['--folder',str(folder),'--candidate',str(candidate),'--method',method,'--side',side,'--out',str(path)]))
+            if not any(codes):
+                execute('qwen-'+method+'-compare','qwen','r3.qwen_independent_probe',
+                    ['--compare',str(paths['author']),str(paths['local']),'--out',str(attempt/('qwen-'+method+'-comparison.json'))],
+                    comparison_receipt=attempt/('qwen-'+method+'-comparison.json'))
         paths={side:attempt/('mini-'+side) for side in ('author','session')};codes=[]
         for side,path in paths.items():
             codes.append(execute(path.name,'mini','r3.mini_independent_probe',['--mode',side,'--folder',str(folder),

@@ -97,7 +97,7 @@ class NativeSession:
             if key=='tokenizer_sha256' and self.key=='mini8' and key not in audit:
                 continue  # Legacy Mini audit binds tokenizer via the frozen model source and prompt IDs.
             if audit.get(key)!=value:raise Blocked('Runtime input differs from audit: '+key)
-        metadata={'prompt_sha256':prompt_sha,'full_visual_tokens':visual,'full_prompt_tokens':expanded,
+        metadata={'prompt_sha256':prompt_sha,'prompt_ids':ids.tolist(),'full_visual_tokens':visual,'full_prompt_tokens':expanded,
                        'runtime_processor_sha256':processor_raw,'audited_processor_sha256':processor_sha}
         if uses_fastv_runtime(self.condition):metadata['control_evidence']=control
         return inputs,metadata
@@ -118,4 +118,5 @@ class NativeSession:
         try:result=generate_native(self.model,inputs,self.tokenizer,job,checkpoint)
         finally:hook.remove()
         if not caches:raise Blocked('No cache evidence')
-        return dict(result,**metadata,prefill_layer_kv=caches[0],final_layer_kv=caches[-1])
+        return dict(result,**metadata,prefill_layer_kv=caches[0],final_layer_kv=caches[-1],
+                    generation_eos_token_id=self.model.generation_config.eos_token_id)

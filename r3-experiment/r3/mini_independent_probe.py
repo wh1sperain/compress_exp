@@ -64,6 +64,26 @@ def verify_vision_checkpoint(model, model_path):
     return {'verified_tensors':checked,'checkpoint_index_sha256':digest(index_path.read_bytes())}
 
 
+def finalize_bf16(model, device):
+    """Explicit study-wide conversion after strict checkpoint dispatch.
+
+Reject unmaterialized tensors before .to(); do not replace/reset any module or
+reload external CLIP. HF can retain FP32 submodules despite torch_dtype.
+"""
+    import torch
+    tensors = list(model.named_parameters()) + list(model.named_buffers())
+    meta = [name for name, tensor in tensors if tensor.is_meta]
+    if meta: raise Blocked('Unmaterialized checkpoint tensors: '+', '.join(meta[:12]))
+    before = {name: str(tensor.dtype) for name,tensor in model.named_parameters()
+              if tensor.is_floating_point() and tensor.dtype != torch.bfloat16}
+    model.to(device=device, dtype=torch.bfloat16)
+    remaining = [name for name,p in model.named_parameters()
+                 if p.is_meta or (p.is_floating_point() and p.dtype != torch.bfloat16)]
+    if remaining: raise Blocked('BF16 conversion incomplete: '+', '.join(remaining[:12]))
+    return {'non_bf16_parameters_before_conversion':before,
+            'all_parameters_materialized':True,'all_floating_parameters_bf16':True}
+
+
 def author_load(folder, out):
     import importlib
     import torch
@@ -103,12 +123,14 @@ def author_load(folder, out):
         model_path, None, 'llava-mini-llama-3.1-8b', device_map='cuda:0', device='cuda',
         local_files_only=True, attn_implementation='eager')
     model.eval().requires_grad_(False)
-    if any(p.dtype != torch.bfloat16 for p in model.parameters() if p.is_floating_point()):
-        raise Blocked('Unexpected model parameter dtype')
+    conversion = finalize_bf16(model, 'cuda:0')
+    write(out/'author_dtype_conversion.json',conversion)
     return model, tokenizer, processor, dict(
         source_sha256=digest(source), dtype_ast_sites=count, loading_info=loading,
+        dtype_conversion=conversion,
         loader_adjustments=['FP16 constants to BF16', 'local pinned CLIP path',
-            'eager checkpoint vision construction before strict dispatch', 'eval and frozen parameters'],
+            'eager checkpoint vision construction before strict dispatch', 'eval and frozen parameters',
+            'explicit full-model BF16 conversion after strict dispatch; reject meta tensors'],
         author_context_return=context)
 
 

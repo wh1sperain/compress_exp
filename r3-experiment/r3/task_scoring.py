@@ -1,7 +1,7 @@
 """Offline label-side scoring. Never import this module into generation workers.
 
-GQA remains blocked pending verification of its official evaluator. MathVista
-normalization follows the reviewed author function, but extraction is study V3,
+GQA uses exact answer equality from its reviewed evaluator, without VQA-style
+normalization. MathVista normalization follows the reviewed author function, but extraction is study V3,
 not the benchmark's GPT-assisted extraction pipeline.
 """
 import argparse
@@ -14,6 +14,21 @@ from .scoring import extract, nls, edit_distance, r10
 
 MATHVISTA_SOURCE='https://github.com/lupantech/MathVista/blob/main/evaluation/calculate_score.py'
 CHART_SOURCE='https://github.com/vis-nlp/UniChart/blob/56dd59af1c3ebec1773fe8a4bf43694cd565130c/model/chartqa_model.py'
+GQA_OFFICIAL_METRIC='https://cs.stanford.edu/people/dorarad/gqa/evaluate.html'
+GQA_EVALUATOR_REVISION='e442a4c14af1b333067a6b8310c9111cad922033'
+GQA_EVALUATOR_PATH='video/Video-LLaVA/videollava/eval/eval_gqa.py'
+GQA_EVALUATOR_SHA256='5d5d1771a41cc5ca2d596a63ee0737dc68163502c79c51b1dfebc84e8248a4ae'
+GQA_EVALUATOR_SOURCE=('https://github.com/CodeChildCZJ/PriorTR/blob/'+GQA_EVALUATOR_REVISION+'/'+GQA_EVALUATOR_PATH)
+
+
+def gqa_exact(prediction, reference):
+    """GQA evaluator: correct = (predicted == gold); no answer normalization.
+
+    LLaVA's separate submission converter lowercases/removes trailing periods;
+    that is not part of the official accuracy comparison and is not added here.
+    Study V3 extraction happens upstream and remains explicitly identified.
+    """
+    return prediction is not None and prediction == reference
 
 
 def mathvista_normalize(prediction, options, answer_type, precision):
@@ -104,7 +119,13 @@ def score_prediction(prediction, row, label):
         return dict(metric='normalized_accuracy',score=float(normalized is not None and normalized==refs[0]),
                     normalized_prediction=normalized,source=MATHVISTA_SOURCE,
                     extraction_protocol='study V3, not official GPT answer extraction')
-    if task=='GQA-balanced-val':raise Blocked('GQA official evaluator not independently verified; do not substitute VQA normalization')
+    if task=='GQA-balanced-val':
+        if len(refs)!=1:raise Blocked('GQA must have one reference')
+        return dict(metric='accuracy',score=float(gqa_exact(prediction,refs[0])),
+                    exact=gqa_exact(prediction,refs[0]),normalized_prediction=prediction,
+                    source=GQA_OFFICIAL_METRIC,evaluator_source=GQA_EVALUATOR_SOURCE,
+                    evaluator_revision=GQA_EVALUATOR_REVISION,evaluator_sha256=GQA_EVALUATOR_SHA256,
+                    extraction_protocol='study V3; exact equality, no LLaVA submission conversion or VQA normalization')
     raise Blocked('Unknown task: '+task)
 
 
