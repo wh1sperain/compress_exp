@@ -20,6 +20,7 @@ class RequestSampler:
         if self.checkpoint.exists():
             receipt=read(self.checkpoint)
             if receipt['job_key']!=job['job_key']:raise Blocked('Checkpoint belongs to another job')
+            if receipt['seed']!=job['seed']:raise Blocked('Checkpoint RNG seed changed')
             if receipt['generated_steps']!=len(receipt['generated_token_ids']):raise Blocked('RNG/prefix offset mismatch')
             self.saved=receipt['generated_token_ids']
         self.start=time.time()
@@ -44,9 +45,10 @@ class RequestSampler:
     def flush(self):
         import torch
         ids=torch.cat(self.ids).tolist() if self.ids else []
-        write(self.checkpoint,{'job_key':self.job['job_key'],'generated_token_ids':ids,
+        from .prefix_checkpoint import publish
+        publish(self.checkpoint,{'job_key':self.job['job_key'],'generated_token_ids':ids,
                               'generated_steps':len(ids),'seed':self.job['seed'],
-                              'updated_at':time.time(),'rebuild_prefix_tokens':len(self.saved)})
+                              'updated_at':time.time(),'rebuild_prefix_tokens':len(self.saved)},self.saved)
         return ids
 
 
@@ -60,6 +62,7 @@ def generate_native(model,inputs,tokenizer,job,checkpoint,extra=None):
     if extra:kwargs.update(extra)
     with torch.inference_mode():model.generate(**inputs,**kwargs)
     ids=sampler.flush()
+    if len(ids)<len(sampler.saved):raise Blocked('Generation ended before saved prefix was fully reconstructed')
     eos=model.generation_config.eos_token_id
     eos=[] if eos is None else [eos] if isinstance(eos,int) else eos
     ended=bool(ids and ids[-1] in eos)

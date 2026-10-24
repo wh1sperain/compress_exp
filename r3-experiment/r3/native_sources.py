@@ -10,6 +10,13 @@ from pathlib import Path
 from .common import Blocked, digest, read
 
 
+def require_adaptive_agile():
+    import os
+    # The author branches on presence, so even an empty value must be rejected.
+    if 'DIST_THRESHOLD' in os.environ:
+        raise Blocked('AgilePruner DIST_THRESHOLD overrides adaptive thresholds')
+
+
 class AuthorSources:
     def __init__(self, lock_path):
         self.lock = read(lock_path)
@@ -52,6 +59,7 @@ class AuthorSources:
         return self.functions('PriorTR', relative, ['compute_scores'], 'PriorTRStrategy')['compute_scores']
 
     def agile(self):
+        require_adaptive_agile()
         return self.functions('AgilePruner', 'llava/model/llava_arch.py',
                               ['calculate_adaptive_tau', 'effective_rank', 'select_diverse_tokens_by_attention_and_distance'],
                               constants=('ERANK_AVG_REF', 'TAU_MAX'))

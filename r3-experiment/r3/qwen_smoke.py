@@ -40,7 +40,7 @@ def activate(folder):
     return source
 
 
-def run(folder,method,out,model_key):
+def run(folder,method,out,model_key,candidate=None):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Use a new immutable smoke attempt')
     activate(folder)
@@ -72,13 +72,27 @@ def run(folder,method,out,model_key):
     processor=Qwen3VLProcessor.from_pretrained(lock['path'],local_files_only=True,
                                              min_pixels=262144,max_pixels=4194304)
     protocol=read(Path(__file__).resolve().parent.parent/'round3_spec.json')
-    messages=[{'role':'user','content':[{'type':'image'},
-        {'type':'text','text':'Describe this image.'+protocol['prompt']['suffix']}]}]
+    image=Image.new('RGB',(640,480),(127,100,80))
+    question='Describe this image.'+protocol['prompt']['suffix']
+    if candidate:
+        from .audit_qwen_inputs import question_text
+        row=read(candidate)
+        if digest(Path(row['image_path']).read_bytes())!=row['image_sha256']:raise Blocked('Diagnostic image changed')
+        image=Image.open(row['image_path']).convert('RGB');question=question_text(row,protocol['prompt']['suffix'])
+    messages=[{'role':'user','content':[{'type':'image'},{'type':'text','text':question}]}]
     text=processor.apply_chat_template(messages,tokenize=False,add_generation_prompt=True)
-    batch=processor(text=[text],images=[Image.new('RGB',(640,480),(127,100,80))],return_tensors='pt')
+    batch=processor(text=[text],images=[image],return_tensors='pt')
     batch={k:v.to(model.device) for k,v in batch.items()}
     full_visual=int((batch['input_ids']==model.config.image_token_id).sum())
     if batch['input_ids'].shape[1]>8192:raise Blocked('Prompt exceeds frozen limit')
+    if candidate:
+        from .correctness_probe import run as probe
+        probe(model,batch,processor.tokenizer,model.model.language_model.layers,out,
+            dict(method=model_key+'-'+method,model_revision=lock['revision'],uid=row['uid'],
+                 image_sha256=row['image_sha256'],prompt_ids=batch['input_ids'].cpu().tolist(),loading_info=info,
+                 trainable_parameters=sum(p.numel() for p in model.parameters() if p.requires_grad),
+                 author_revision=read(folder/'manifests/source_lock.json')['PriorTR']['revision']),32768)
+        return
     shapes={};handles=[]
     def hook(i):
         def record(module,args,kwargs):
@@ -103,4 +117,5 @@ if __name__=='__main__':
     p.add_argument('--folder',required=True);p.add_argument('--out',required=True)
     p.add_argument('--method',choices=['Full','PriorTR50','PriorTR25'],required=True)
     p.add_argument('--model-key',choices=['qwen8','qwen4'],default='qwen8')
-    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.model_key)
+    p.add_argument('--candidate')
+    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.model_key,a.candidate)

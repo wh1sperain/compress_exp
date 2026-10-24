@@ -14,6 +14,9 @@ from .native_sources import visionzip_arguments
 
 
 def activate(folder,method):
+    if method.startswith('Agile'):
+        from .native_sources import require_adaptive_agile
+        require_adaptive_agile()
     sources=read(folder/'manifests/source_lock.json')
     names=['LLaVA-Mini'] if method=='MiniNative' else ['AgilePruner'] if method.startswith('Agile') else ['PriorTR']
     if method.startswith('VisionZip'):names+=['VisionZip']
@@ -33,7 +36,7 @@ def activate(folder,method):
     return paths
 
 
-def run(folder,method,out):
+def run(folder,method,out,candidate=None):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Existing smoke attempt must remain immutable; choose a new output path')
     paths=activate(folder,method)
@@ -77,7 +80,7 @@ def run(folder,method,out):
     if method.startswith('PriorTR'):
         VTRConfig=importlib.import_module('llava.vtr.config').VTRConfig
         model.setup_vtr(VTRConfig(enabled=True,strategy='priortr',prune_layer=3,keep_tokens=keep,query_aggregation='question',head_aggregation='mean'))
-    if method.startswith('VisionZip'):
+    if method.startswith('VisionZip') and method!='VisionZipFull':
         from visionzip import visionzip
         model=visionzip(model,**visionzip_arguments(keep))
     mm=importlib.import_module(prefix+'.mm_utils')
@@ -87,6 +90,12 @@ def run(folder,method,out):
     image=Image.new('RGB',(640,480),(127,100,80))
     spec=read(Path(__file__).resolve().parent.parent/'round3_spec.json')
     text=constants.DEFAULT_IMAGE_TOKEN+'\nDescribe this image.'+spec['prompt']['suffix']
+    if candidate:
+        from .audit_qwen_inputs import question_text
+        row=read(candidate)
+        if digest(Path(row['image_path']).read_bytes())!=row['image_sha256']:raise Blocked('Diagnostic image changed')
+        image=Image.open(row['image_path']).convert('RGB')
+        text=constants.DEFAULT_IMAGE_TOKEN+'\n'+question_text(row,spec['prompt']['suffix'])
     conv=conversation.conv_templates['llava_llama_3_1' if mini else 'llava_v1'].copy()
     conv.append_message(conv.roles[0],text);conv.append_message(conv.roles[1],None)
     prompt=conv.get_prompt()
@@ -106,6 +115,14 @@ def run(folder,method,out):
         if not hasattr(model.model,'fastv_forward'):raise Blocked('Frozen FastV author forward absent')
         if method!='FastVFull':
             model.model.forward=functools.partial(model.model.fastv_forward,fastv_config=dict(fastv_k=2,fastv_r=1-keep/576,image_token_start_index=start,image_token_length=576))
+    if candidate:
+        from .correctness_probe import run as probe
+        probe(model,{'inputs':ids,'images':pixels},tokenizer,model.model.layers,out,
+            dict(method=method,model_revision=lock[key]['revision'],clip_revision=lock['clip336']['revision'],
+                 image_sha256=row['image_sha256'],uid=row['uid'],prompt_ids=ids.cpu().tolist(),
+                 loading_info=loading_info,trainable_parameters=sum(p.numel() for p in model.parameters() if p.requires_grad),
+                 author_sources={k:read(folder/'manifests/source_lock.json')[k]['revision'] for k in paths}),2048)
+        return
     layer_shapes={};handles=[]
     def hook(index):
         def fn(module,args,kwargs):
@@ -137,7 +154,8 @@ def run(folder,method,out):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--folder',required=True);p.add_argument('--method',required=True);p.add_argument('--out',required=True)
-    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out))
+    p.add_argument('--candidate',help='Real-image diagnostic JSON; runs 1025 forcing steps and natural generation')
+    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.candidate)
 
 
 if __name__=='__main__':main()

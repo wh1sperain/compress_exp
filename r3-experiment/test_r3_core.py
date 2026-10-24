@@ -118,6 +118,30 @@ class CoreTests(unittest.TestCase):
         self.assertAlmostEqual(value[1],2/3)
         with self.assertRaises(Blocked):paired(rows[:-1],'qwen8','PriorTR25','reasoning_tokens')
         with self.assertRaises(Blocked):paired(rows+[rows[0]],'qwen8','PriorTR25','reasoning_tokens')
+    def test_replay_cannot_destroy_longer_checkpoint(self):
+        from r3.prefix_checkpoint import publish
+        from r3.common import write,read
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'prefix.json';saved=list(range(300))
+            old=dict(job_key='j',seed=1234,generated_token_ids=saved,generated_steps=300)
+            write(p,old);raw=p.read_bytes()
+            def receipt(ids):return dict(old,generated_token_ids=ids,generated_steps=len(ids))
+            for n in (128,256,299,300):
+                self.assertFalse(publish(p,receipt(saved[:n]),saved))
+                self.assertEqual(p.read_bytes(),raw)
+            with self.assertRaises(Blocked):publish(p,receipt([999]+saved[1:]),saved)
+            self.assertEqual(p.read_bytes(),raw)
+            extended=list(range(384));self.assertTrue(publish(p,receipt(extended),saved))
+            self.assertEqual(read(p)['generated_steps'],384)
+            self.assertEqual(next(p.with_name(p.name+'.history').glob('*.json')).read_bytes(),raw)
+            with self.assertRaises(Blocked):publish(p,receipt(saved),saved)
+            self.assertEqual(read(p)['generated_steps'],384)
+    def test_agile_rejects_environment_override(self):
+        from r3.native_sources import require_adaptive_agile
+        with patch.dict('os.environ',{},clear=True):require_adaptive_agile()
+        for value in ('','0','0.25'):
+            with patch.dict('os.environ',{'DIST_THRESHOLD':value},clear=True):
+                with self.assertRaises(Blocked):require_adaptive_agile()
     def test_visionzip_public_budget(self):
         for k,d,c in [(288,243,45),(144,122,22)]:
             self.assertEqual(visionzip_arguments(k),dict(dominant=d,contextual=c))

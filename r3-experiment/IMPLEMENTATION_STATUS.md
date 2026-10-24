@@ -72,3 +72,9 @@
 2026-10-24 11:22：ChartQA全部1250题Qwen原生输入审计退出0。GQA长连接在163577856字节后ChunkedEncodingError，原partial与失败回执保留。新增4路8MiB HTTP Range传输：服务器206/Content-Range/ETag或Last-Modified验证、分段SHA、不可变成功块、完整组装SHA及双份空间预留；不做无界重试，不改来源/采样。24项CPU测试通过，含模拟传输组装与拒绝错误字节范围/变化来源。
 
 2026-10-24 11:37：GQA分段返回非206，保留失败；定向小范围与8MiB含If-Range探针证实206且ETag未变，网络不稳定。增强异常HTTP回执与stream模式，避免异常整包响应被读入内存；显式恢复，未无界自动重试。新增LLaVA原生pad336/CLIP14 patch/tokenizer输入审计，检查单图占位、实际像素张量和Full展开2048上限；Mini真实预融合审计仍待实现。24项CPU/语法检查通过。
+
+
+2026-10-24 12:08：Mini全部3250题实际压缩/四层prefusion输入审计退出0。逐文件SHA及记录完整性复核9750条（三模型×3250题）通过，全部原生输入合格。独立图像数：DocVQA390、InfoVQA223、ChartQA625、MathVista972；尚未跨任务去重或冻结最终500/100。ModelScope问题包已校验完成，图像包检查时下载1.64/21.82GB；无新失败。正式runner与完整后端/长自然轨迹认证仍未完成，正式研究未启动。
+
+
+2026-10-24 用户外部复核意见落实：确认并修复恢复时较短前缀覆盖旧检查点风险（未完整重放不发布，更长前缀发布前保留旧版本），并在Agile原生与作者函数入口拒绝DIST_THRESHOLD环境覆盖。26项CPU测试通过。新增真实图像1025步teacher-forcing逐层KV增长/位置/mask形状与选定logits探针，再按原上限自然生成；独立协调器PID14515/release0b6ab58ff2fbfbc9正在执行，优先FastV。诊断不是独立作者等价证明，所有方法总状态保持INCONCLUSIVE，正式生成禁止。仍需独立作者QP/索引/特征、FastV官方完整入口与当前组合路径、DeepStack/mRoPE、Full跨环境差异及恢复GPU证据。Mini已有3250候选真实预融合输入审计完成，不能代替原生前向数值对照。
