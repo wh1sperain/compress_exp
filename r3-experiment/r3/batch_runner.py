@@ -8,7 +8,7 @@ from .runner import load_plan, supported, publish_once, canonical
 
 
 def validate_profile(profile, expected_max_live=None):
-    if profile.get('backend') != 'native-padded-batch':
+    if profile.get('backend') not in ('native-padded-batch','qwen-paged-recovery-v1'):
         raise Blocked('Expected frozen native-padded-batch profile')
     slots=profile.get('max_live_requests')
     if type(slots) is not int or not 1<=slots<=32:
@@ -65,8 +65,12 @@ def run_jobs(jobs,rows,identity,out,profile,session_factory,scheduler_factory,ex
                 raise Blocked('Invalid immutable success receipt')
             if any(saved.get(k)!=v for k,v in job.items()):raise Blocked('Existing result does not match registered job')
             validate_generation(saved,job);completed+=1;continue
-        if list(directory.glob('failure-*.json')):
-            raise Blocked('Prior failure requires reviewed recovery; prefix remains unchanged')
+        failures=list(directory.glob('failure-*.json'))
+        if failures:
+            from .common import digest
+            approved=profile.get('reviewed_failure_hashes',{})
+            if any(approved.get(str(p))!=digest(p.read_bytes()) or read(p).get('type')!='KeyboardInterrupt' for p in failures):
+                raise Blocked('Prior failure requires reviewed recovery; prefix remains unchanged')
         pending.append((row,job,directory/'prefix.json'))
     def status(stage):
         write(out/'status.json',dict(stage=stage,completed=completed,total=len(jobs),

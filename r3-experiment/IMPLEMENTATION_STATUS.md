@@ -2,6 +2,16 @@
 
 2026-10-24。本文件记录开发事实，不替代实验规约。
 
+## 最新：用户暂停正式推理，复用R2分页方案
+
+2026-10-24后续：用户明确“完成后续，继续实验”。恢复专项10项CPU测试、四槽原32768上限预留/补槽/页面归还、Qwen8 PriorTR50与Qwen4 PriorTR25短数值检查通过。已用release `fb60dddd6256713c`启动恢复协调器54472、Qwen8 Full worker54486；4路分页KV/Graph，缓存池24GiB。旧14397成功结果全部按原绑定验证并跳过，3条原前缀逐token强制重放、不重抽，PCG64 uniform游标以原生成长度续接。原暂停失败及旧控制状态保留；新状态看`recovery_status.json`，旧暂停父进程已退役。正式仍只生成原始输出，不解析评分。后端迁移来源通过独立恢复回执及每条新结果的`execution_recovery_id/recovery_code_sha256`标记，不能将混合后端视为严格逐token等价。
+
+- 正式运行已暂停，14397条成功结果原位保留；三个未完成请求的29091/965/34个原token已落盘，父协调进程停止，原KeyboardInterrupt记录保留，r3定时任务暂停。
+- 候选`r3/qwen_paged_decode.py`适配旧`Compress/src/methods_qwen3.py`分页KV/FlashInfer/CUDA Graph。保留R3原生prefill和mRoPE；普通视觉注意力改SDPA，作者请求权重路径保留。原生参考先执行，候选后构建，避免参考被候选设置影响。
+- Full与PriorTR25各3图32步数值检查PASS：KL最大0.002831/0.007909，TV最大0.032169/0.052142；KV一致，argmax不同0/1处，不能声明逐token严格等价。
+- release `8d7abae5955b2de3`完成候选测速：3请求、重复KV模拟约30000/1100/200长度，16步纯解码，旧dense 9.82 token/s、新paged 161.65 token/s，16.46倍。排除prefill/采样，非自然完整吞吐，不据此承诺整轮加速倍数。
+- 尚未接入正式调度/原prefix恢复，未恢复正式实验。需完成页面复用/补槽、原token和RNG游标恢复、来源与新后端版本绑定后才可恢复。原OOM与诊断驱动失败回执均保留。
+
 ## 已实现并做CPU检查
 
 - `r3.common`：原子JSON写入、协议种子、代码指纹和过期门槛拒绝。

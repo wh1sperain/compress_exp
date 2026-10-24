@@ -18,7 +18,10 @@ def note_error(error, message):
 
 def backend_for(session):
     if session.key.startswith('qwen'):
-        from .qwen_batch_decode import Backend
+        if getattr(session,'use_paged_recovery',False):
+            from .qwen_paged_decode import Backend
+        else:
+            from .qwen_batch_decode import Backend
     elif session.key=='mini8':
         from .mini_batch_decode import Backend
     else:
@@ -37,7 +40,13 @@ def reserve_bytes(config, prompt, cap, scratch_factor=3):
 class Scheduler:
     def __init__(self, session, profile):
         import torch
-        self.session=session;self.model=session.model;self.backend=backend_for(session)
+        self.session=session;self.model=session.model
+        paged=profile.get('backend')=='qwen-paged-recovery-v1' and session.key.startswith('qwen')
+        if paged:
+            session.use_paged_recovery=True
+            session.paged_batch_size=profile['max_live_requests_by_model'][session.key]
+            session.paged_cache_gib=profile['paged_cache_gib']
+        self.backend=backend_for(session);self.paged=paged
         self.profile=profile;self.maximum=int(profile.get('max_live_requests_by_model',{}).get(session.key,profile['max_live_requests']))
         if not 1<=self.maximum<=32:raise Blocked('Unapproved live slot count')
         if profile.get('dtype')!='bfloat16' or profile.get('kv_dtype')!='bfloat16':raise Blocked('Unapproved precision')
@@ -45,6 +54,8 @@ class Scheduler:
         if self.scratch<3:raise Blocked('Dense batch scratch reservation must be validated before reduction')
         free,total=torch.cuda.mem_get_info()
         self.kv_budget=int(min(free-8*1024**3,total*.90-torch.cuda.memory_reserved()))
+        if paged:
+            self.kv_budget=len(self.backend.free)*len(self.backend.layers)*2*self.backend.page_size*self.backend.heads*self.backend.dim*2
         if self.kv_budget<=0:raise Blocked('Insufficient conservative live KV budget')
         self.device=self.model.device
         eos=self.model.generation_config.eos_token_id
@@ -78,6 +89,9 @@ class Scheduler:
                     row,job,checkpoint=next_request
                     audit=row['native_inputs'][self.session.key]
                     reservation=reserve_bytes(self.model.config,audit['expanded_prompt_tokens'],job['generation']['max_new_tokens'],self.scratch)
+                    if self.paged:
+                        size=audit['expanded_prompt_tokens']+job['generation']['max_new_tokens']
+                        reservation=reserve_bytes(self.model.config,((size+255)//256)*256,0,1)
                     if reservation>self.kv_budget:raise Blocked('One full-cap request exceeds verified KV admission budget')
                     if sum(r['reservation'] for r in active)+reservation>self.kv_budget:break
                     checkpoint=Path(checkpoint);saved=[]
@@ -87,6 +101,7 @@ class Scheduler:
                             raise Blocked('Original prefix identity/RNG mismatch')
                         saved=previous['generated_token_ids']
                     if len(saved)>job['generation']['max_new_tokens']:raise Blocked('Original prefix exceeds output cap')
+                    if any(t in self.eos for t in saved[:-1]):raise Blocked('Original prefix contains interior EOS')
                     u=torch.tensor(uniforms(job['seed'],job['generation']['max_new_tokens']),device=self.device)
                     state=self.backend.prefill(row,job)
                     active.append(dict(row=row,job=job,checkpoint=checkpoint,saved=saved,ids=[],state=state,
@@ -97,11 +112,14 @@ class Scheduler:
                     raise Blocked('Admission made no progress')
                 # Sampling parameters belong to each request; KV decode remains batched.
                 groups={}
+                token_ids=[None]*len(active)
                 for index,r in enumerate(active):
+                    if self.profile.get('prefix_replay')=='original_tokens' and len(r['ids'])<len(r['saved']):
+                        token_ids[index]=r['saved'][len(r['ids'])]
+                        continue
                     g=r['job']['generation']
                     key=(g['temperature'],g['top_k'],g['top_p'])
                     groups.setdefault(key,[]).append(index)
-                token_ids=[None]*len(active)
                 for (temperature,top_k,top_p),indices in groups.items():
                     logits=torch.cat([active[i]['state']['logits'] for i in indices],dim=0)
                     u=torch.stack([active[i]['u'][len(active[i]['ids'])] for i in indices])
@@ -124,6 +142,10 @@ class Scheduler:
                             generation_eos_token_id=self.model.generation_config.eos_token_id,
                             wall_seconds=time.time()-r['start'],reconstructed_prefix_tokens=len(r['saved']),
                             batch_backend=self.profile['backend'],live_limit=self.maximum)
+                        if self.profile.get('recovery_id'):
+                            result['execution_recovery_id']=self.profile['recovery_id']
+                            result['recovery_code_sha256']=self.profile['recovery_code_sha256']
+                            result['prefix_replay_policy']=self.profile['prefix_replay']
                         release(r);completed+=1
                         ready.append((r['job'],r['row'],result))
                     else:survivors.append(r);survivor_tokens.append(token)

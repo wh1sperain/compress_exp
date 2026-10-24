@@ -4,7 +4,7 @@ from pathlib import Path
 root=Path('/root/autodl-tmp/Compress/runs/visual-compression-r3')
 launch=json.loads((root/'telemetry/formal_inference_launch.json').read_text())
 out=Path(launch['output']);result={'checked_at':time.time(),'launch':launch,'receipts':{},'workers':{}}
-for name in ('lifecycle.json','status.json','completion.json','lifecycle_completion.json'):
+for name in ('lifecycle.json','status.json','recovery_status.json','completion.json','lifecycle_completion.json'):
     path=out/name
     if path.exists():result['receipts'][name]=json.loads(path.read_text())
 for path in sorted(out.glob('*/status.json')):
@@ -24,7 +24,7 @@ for name in ('lifecycle-launch.log','coordinator.log'):
     path=out/name
     if path.exists():
         with path.open('rb') as f:f.seek(max(0,path.stat().st_size-1500));result[name+'_tail']=f.read().decode(errors='replace')
-state=result['receipts'].get('status.json',{})
+state=result['receipts'].get('recovery_status.json',result['receipts'].get('status.json',{}))
 if state.get('current'):
     logs=sorted(out.glob(state['current']+'-*.log'),key=lambda p:p.stat().st_mtime)
     if logs:

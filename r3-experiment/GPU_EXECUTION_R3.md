@@ -1,5 +1,7 @@
 # RTX PRO 6000 执行与吞吐规约
 
+2026-10-24性能恢复更新（优先于下文旧运行状态）：用户要求暂停优化并复用R2后明确恢复。Qwen8/4现采用4路BF16分页KV+FlashInfer+CUDA Graph，24GiB固定页池，按完整输出上限保守准入；LLaVA/Mini保持原4路后端。保留原任务/采样/上限，普通视觉注意力SDPA经短数值比较，作者显式权重路径仍保留。3图短检查和四槽补槽、原prefix/RNG测试通过，不是完整6000自然等价认证。合成长短缓存纯解码16.46倍仅为诊断测速，不承诺正式端到端倍率。恢复发布fb60dddd6256713c，原结果不可变，新增结果带恢复来源标记。
+
 2026-10-24最新执行状态：用户强调本规约后，B1正式启动被搁置。新后端 `native-padded-batch` 保留作者逐题完整prefill、选择与位置，在一份权重上进行最多四请求批解码，EOS/上限立即释放请求，下一轮补槽。LLaVA/Qwen逐层独立KV+SDPA，Mini调用原生Llama批forward；使用dense padding，分页/Graph仍未实现。实际KV准入按原完整剩余输出预算和3倍scratch保守预留，留8GiB及总显存10%边界，满cap合成内存检查与自然补槽检查通过后冻结。六条件短数值已PASS，不等于原完整认证；短测试计时含图像prefill且Mini首次网络等待混入，不当作正式吞吐结论。正式阶段不解析或评分，最终完整原始结果下载并逐文件校验。
 
 本方案按单张 RTX PRO 6000 Blackwell 96GB 设计。NVIDIA Workstation Edition 公布96GB GDDR7、1792GB/s、最高600W；不同Max-Q/Server版本功耗和带宽不应混用。计算能力为12.0，不能因为同叫Blackwell就默认支持B200的SM100专用kernel。[S11–S14]

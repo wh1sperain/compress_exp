@@ -82,7 +82,7 @@ def distribution_metrics(reference,candidate):
                 max_abs_logit_difference=float((reference-candidate).abs().max()))
 
 
-def run(folder,model_key,condition,out,steps=32,batch_size=4):
+def run(folder,model_key,condition,out,steps=32,batch_size=4,benchmark=False):
     import torch
     from .native_session import NativeSession
     from .natural_preparation import validate_calibration
@@ -106,7 +106,6 @@ def run(folder,model_key,condition,out,steps=32,batch_size=4):
     try:
         session=NativeSession(folder,model_key,condition,out/'loading.json')
         suffix='qwen' if model_key.startswith('qwen') else 'mini' if model_key=='mini8' else 'llava'
-        backend=importlib.import_module('r3.'+suffix+'_batch_decode').Backend(session)
         prefix=make_prefix(session.tokenizer,session.model.generation_config.eos_token_id,steps)
         write(out/'forcing_prefix.json',dict(token_ids=prefix,diagnostic_only=True,original_research_cap=spec['models'][model_key]['max_new_tokens']))
         torch.cuda.synchronize();torch.cuda.reset_peak_memory_stats();started=time.monotonic()
@@ -116,6 +115,9 @@ def run(folder,model_key,condition,out,steps=32,batch_size=4):
             write(out/'status.json',dict(stage='native',completed=len(references),total=batch_size))
         torch.cuda.synchronize();native_wall=time.monotonic()-started
         native_peak=torch.cuda.max_memory_allocated()
+        # Build candidate only after independent reference; its pool/config must
+        # not consume reference workspace or affect reference numerical kernels.
+        backend=importlib.import_module('r3.'+suffix+'_batch_decode').Backend(session)
         # Keep complete raw distributions as diagnostic evidence, not answers.
         torch.save(dict(prefix=prefix,uids=identity['uids'],logits=[r['logits'] for r in references],
                         kv=[r['kv'] for r in references]),out/'native.pt')
@@ -161,6 +163,9 @@ def run(folder,model_key,condition,out,steps=32,batch_size=4):
             position_validation_scope='position effects covered by fixed-prefix logits and all-layer KV; not a standalone raw position trace',
             production_certified=False,synthetic_fixed_prefix=True)
         write(out/'receipt.json',receipt)
+        if benchmark and passed:
+            from .paged_performance_probe import run as measure
+            measure(backend,states,out/'performance.json')
         return receipt
     except BaseException as exc:
         write(out/'failure.json',dict(identity,status='FAIL',error_type=type(exc).__name__,error=str(exc)[:1500],production_certified=False))
