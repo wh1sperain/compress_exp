@@ -226,4 +226,73 @@ class DiagnosticConfigTests(unittest.TestCase):
                 raise RuntimeError('simulate interruption')
         self.assertIs(model.generation_config,original)
 
+class RunnerTests(unittest.TestCase):
+    def fixture(self):
+        from r3.common import digest
+        job={'job_key':digest('job'),'uid':'u','task':'DocVQA','image_sha256':'image','model':'llava7',
+             'condition':'Full','stage':'main','generation':{'max_new_tokens':2}}
+        return job,{'u':{'uid':'u','task':'DocVQA','image_sha256':'image','question':'q'}}
+    def test_success_is_immutable_and_not_generated_twice(self):
+        from r3.runner import run_jobs
+        job,rows=self.fixture();calls=[]
+        class Session:
+            def generate(self,*args):
+                calls.append(1)
+                return dict(generated_token_ids=[5,2],output_tokens=2,output_cap_reached=True,eos_terminated=True)
+        with tempfile.TemporaryDirectory() as d:
+            factory=lambda *args:Session()
+            self.assertEqual(run_jobs([job],rows,{'code':'a'},d,factory),1)
+            path=Path(d)/job['job_key']/'result.json';original=path.read_bytes()
+            self.assertEqual(run_jobs([job],rows,{'code':'a'},d,factory),1)
+            self.assertEqual(calls,[1]);self.assertEqual(original,path.read_bytes())
+            with self.assertRaises(Blocked):run_jobs([job],rows,{'code':'b'},d,factory)
+    def test_failure_retained_and_not_automatically_resampled(self):
+        from r3.runner import run_jobs
+        job,rows=self.fixture();calls=[]
+        class Session:
+            def generate(self,row,job,prefix):
+                calls.append(1);Path(prefix).write_text('original prefix')
+                raise RuntimeError('simulated device failure')
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(RuntimeError):run_jobs([job],rows,{},d,lambda *a:Session())
+            with self.assertRaises(Blocked):run_jobs([job],rows,{},d,lambda *a:Session())
+            self.assertEqual(calls,[1]);directory=Path(d)/job['job_key']
+            self.assertEqual(len(list(directory.glob('failure-*.json'))),1)
+            self.assertEqual((directory/'prefix.json').read_text(),'original prefix')
+    def test_unsupported_and_early_stop_fail_closed(self):
+        from r3.runner import run_jobs
+        job,rows=self.fixture()
+        with tempfile.TemporaryDirectory() as d:
+            changed=dict(job,condition='Random25_L2')
+            with self.assertRaises(Blocked):run_jobs([changed],rows,{},d,lambda *a:self.fail('must not load'))
+            class Session:
+                def generate(self,*a):return dict(generated_token_ids=[5],output_tokens=1,output_cap_reached=False,eos_terminated=False)
+            with self.assertRaises(Blocked):run_jobs([job],rows,{},d,lambda *a:Session())
+            self.assertFalse((Path(d)/job['job_key']/'result.json').exists())
+    def test_atomic_publish_refuses_overwrite(self):
+        from r3.runner import publish_once
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'result.json';publish_once(p,{'v':1})
+            with self.assertRaises(FileExistsError):publish_once(p,{'v':2})
+            self.assertEqual(json.loads(p.read_text()),{'v':1})
+
+class OfficialMappingTests(unittest.TestCase):
+    def test_lossless_names_and_unrecognized_tensor_rejection(self):
+        from r3.fastv_official_probe import mapped_name
+        self.assertEqual(mapped_name('model.layers.0.self_attn.q_proj.weight'),'language_model.model.layers.0.self_attn.q_proj.weight')
+        self.assertEqual(mapped_name('model.vision_tower.vision_tower.vision_model.embeddings.patch_embedding.weight'),'vision_tower.vision_model.embeddings.patch_embedding.weight')
+        self.assertEqual(mapped_name('model.mm_projector.2.bias'),'multi_modal_projector.linear_2.bias')
+        with self.assertRaises(Blocked):mapped_name('unrecognized.weight')
+
+class ProcessorHashTests(unittest.TestCase):
+    def test_only_known_version_metadata_can_differ(self):
+        from r3.native_session import processor_hash_for_audit
+        from r3.common import digest
+        config={'size':336,'do_resize':True};expected=digest(json.dumps(config,sort_keys=True))
+        extended=dict(config,_valid_processor_keys=['images','do_resize','size','resample','do_center_crop','crop_size','do_rescale','rescale_factor','do_normalize','image_mean','image_std','do_convert_rgb','return_tensors','data_format','input_data_format'])
+        raw,normalized=processor_hash_for_audit(extended,expected)
+        self.assertNotEqual(raw,expected);self.assertEqual(normalized,expected)
+        with self.assertRaises(Blocked):processor_hash_for_audit(dict(extended,size=224),expected)
+        with self.assertRaises(Blocked):processor_hash_for_audit(dict(extended,_valid_processor_keys=['anything']),expected)
+
 if __name__=='__main__':unittest.main()

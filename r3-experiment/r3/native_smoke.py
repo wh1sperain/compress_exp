@@ -36,7 +36,7 @@ def activate(folder,method):
     return paths
 
 
-def run(folder,method,out,candidate=None,selector_only=False,resume_only=False):
+def run(folder,method,out,candidate=None,selector_only=False,resume_only=False,load_only=False):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Existing smoke attempt must remain immutable; choose a new output path')
     paths=activate(folder,method)
@@ -83,6 +83,8 @@ def run(folder,method,out,candidate=None,selector_only=False,resume_only=False):
     if method.startswith('VisionZip') and method!='VisionZipFull':
         from visionzip import visionzip
         model=visionzip(model,**visionzip_arguments(keep))
+    if load_only:
+        return model,tokenizer,vision,loading_info,paths
     mm=importlib.import_module(prefix+'.mm_utils')
     constants=importlib.import_module(prefix+'.constants')
     conversation=importlib.import_module(prefix+'.conversation')

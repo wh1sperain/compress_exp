@@ -40,7 +40,7 @@ def activate(folder):
     return source
 
 
-def run(folder,method,out,model_key,candidate=None,selector_only=False,resume_only=False):
+def run(folder,method,out,model_key,candidate=None,selector_only=False,resume_only=False,load_only=False):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Use a new immutable smoke attempt')
     activate(folder)
@@ -71,6 +71,8 @@ def run(folder,method,out,model_key,candidate=None,selector_only=False,resume_on
     model.eval().requires_grad_(False)
     processor=Qwen3VLProcessor.from_pretrained(lock['path'],local_files_only=True,
                                              min_pixels=262144,max_pixels=4194304)
+    if load_only:
+        return model,processor,info
     protocol=read(Path(__file__).resolve().parent.parent/'round3_spec.json')
     image=Image.new('RGB',(640,480),(127,100,80))
     question='Describe this image.'+protocol['prompt']['suffix']
