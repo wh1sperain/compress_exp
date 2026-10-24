@@ -4,9 +4,24 @@ Tests rebuilding native KV from original inputs, not serialized KV restoration.
 Never emits research answers or grants a native gate.
 """
 import time
+import copy
+from contextlib import contextmanager
 from pathlib import Path
 from .common import write, Blocked, code_hash
 from .correctness_probe import cache_lengths
+
+
+@contextmanager
+def diagnostic_no_eos(model):
+    # Legacy sample() falls back to self.generation_config when passed None.
+    original=model.generation_config
+    config=copy.deepcopy(original)
+    config.eos_token_id=None
+    config.forced_eos_token_id=None
+    config._from_model_config=False
+    model.generation_config=config
+    try:yield config
+    finally:model.generation_config=original
 
 
 def run(model, inputs, tokenizer, out):
@@ -50,14 +65,17 @@ def run(model, inputs, tokenizer, out):
             phase[0]=name;observed.clear();stop[0]=limit
             write(out/'status.json',{'stage':name,'updated_at':time.time()})
             try:
-                result=stream.generate_native(model,inputs,tokenizer,job,path,
-                    extra={'eos_token_id':None,'forced_eos_token_id':None})
+                with diagnostic_no_eos(model) as config:
+                    result=stream.generate_native(model,inputs,tokenizer,job,path,
+                        extra={'generation_config':config,'eos_token_id':None,'forced_eos_token_id':None})
             except Interrupted:
                 if limit is None:raise
                 return None
             if limit is not None:raise Blocked('Expected diagnostic interruption did not occur')
             return result
         reference=execute('baseline',out/'baseline.prefix.json')
+        if reference['output_tokens']!=384 or len(baseline)!=384:
+            raise Blocked('Diagnostic baseline did not reach 384 steps')
         checkpoint=out/'resume.prefix.json'
         execute('interrupt_at_300',checkpoint,300)
         original=checkpoint.read_bytes()

@@ -211,4 +211,19 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(len(result[label+'Rescue']['selected_indices']),4)
             self.assertFalse(set(result[label+'Random']['added'])&{4,5})
         self.assertEqual(result,masks('u',[0,1,2,3],[4],[5],list(range(10))))
+class DiagnosticConfigTests(unittest.TestCase):
+    def test_legacy_eos_fallback_disabled_and_restored_after_failure(self):
+        from types import SimpleNamespace
+        from r3.model_resume_probe import diagnostic_no_eos
+        original=SimpleNamespace(eos_token_id=2,forced_eos_token_id=2,_from_model_config=True)
+        model=SimpleNamespace(generation_config=original)
+        with self.assertRaises(RuntimeError):
+            with diagnostic_no_eos(model) as config:
+                self.assertIsNone(model.generation_config.eos_token_id)
+                self.assertIsNone(config.forced_eos_token_id)
+                self.assertFalse(config._from_model_config)
+                self.assertEqual(original.eos_token_id,2)
+                raise RuntimeError('simulate interruption')
+        self.assertIs(model.generation_config,original)
+
 if __name__=='__main__':unittest.main()

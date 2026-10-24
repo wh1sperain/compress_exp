@@ -4,7 +4,7 @@ from pathlib import Path
 from .common import read,write,digest
 
 
-def run(folder,selectors_only=False,methods=None,resume_only=False):
+def run(folder,selectors_only=False,methods=None,resume_only=False,retry_failed_attempt=None):
     lock=(folder/'correctness.lock').open('a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     attempt=folder/'tests'/(('model-resume-' if resume_only else 'real-selectors-' if selectors_only else 'core-correctness-')+str(time.time_ns()));attempt.mkdir()
     candidates=[json.loads(s) for s in (folder/'data/existing-pools-v1/candidates_unvalidated.jsonl').read_text().splitlines()]
@@ -21,7 +21,13 @@ def run(folder,selectors_only=False,methods=None,resume_only=False):
         if not selectors_only:raise ValueError('Method filtering restricted to selector diagnostics')
         if not set(methods)<={m for e,m in jobs}:raise ValueError('Unregistered diagnostic methods')
         jobs=[(e,m) for e,m in jobs if m in methods]
-    state={'pid':os.getpid(),'attempt':str(attempt),'production_started':False,'results':[]}
+    if retry_failed_attempt:
+        if not resume_only:raise ValueError('Recovery filter is diagnostic only')
+        prior=read(Path(retry_failed_attempt)/'completion.json')
+        failed={r['name'] for r in prior['results'] if r['exit_code']!=0}
+        if not failed:raise ValueError('No failed diagnostics to recover')
+        jobs=[(e,m) for e,m in jobs if e+'-'+m in failed]
+    state={'retry_failed_attempt':retry_failed_attempt,'pid':os.getpid(),'attempt':str(attempt),'production_started':False,'results':[]}
     def update(**kw):state.update(kw,updated_at=time.time());write(folder/('telemetry/model_resume_state.json' if resume_only else 'telemetry/real_selectors_state.json' if selectors_only else 'telemetry/correctness_state.json'),state)
     update(stage='running')
     for env,method in jobs:
@@ -45,4 +51,5 @@ if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--selectors-only',action='store_true')
     p.add_argument('--methods',nargs='+')
     p.add_argument('--resume-only',action='store_true')
-    a=p.parse_args();run(Path(a.folder),a.selectors_only,a.methods,a.resume_only)
+    p.add_argument('--retry-failed-attempt')
+    a=p.parse_args();run(Path(a.folder),a.selectors_only,a.methods,a.resume_only,a.retry_failed_attempt)
