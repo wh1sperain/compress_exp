@@ -40,7 +40,7 @@ def activate(folder):
     return source
 
 
-def run(folder,method,out,model_key,candidate=None,selector_only=False):
+def run(folder,method,out,model_key,candidate=None,selector_only=False,resume_only=False):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Use a new immutable smoke attempt')
     activate(folder)
@@ -86,6 +86,10 @@ def run(folder,method,out,model_key,candidate=None,selector_only=False):
     full_visual=int((batch['input_ids']==model.config.image_token_id).sum())
     if batch['input_ids'].shape[1]>8192:raise Blocked('Prompt exceeds frozen limit')
     if candidate:
+        if resume_only:
+            from .model_resume_probe import run as resume_probe
+            resume_probe(model,batch,processor.tokenizer,out)
+            return
         if selector_only:
             from .real_selector_probe import run as selector_probe
             selector_probe(model,batch,folder,'qwen-'+method,out)
@@ -123,4 +127,5 @@ if __name__=='__main__':
     p.add_argument('--model-key',choices=['qwen8','qwen4'],default='qwen8')
     p.add_argument('--candidate')
     p.add_argument('--selector-only',action='store_true')
-    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.model_key,a.candidate,a.selector_only)
+    p.add_argument('--resume-only',action='store_true')
+    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.model_key,a.candidate,a.selector_only,a.resume_only)

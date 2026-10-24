@@ -36,7 +36,7 @@ def activate(folder,method):
     return paths
 
 
-def run(folder,method,out,candidate=None,selector_only=False):
+def run(folder,method,out,candidate=None,selector_only=False,resume_only=False):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Existing smoke attempt must remain immutable; choose a new output path')
     paths=activate(folder,method)
@@ -116,6 +116,10 @@ def run(folder,method,out,candidate=None,selector_only=False):
         if method!='FastVFull':
             model.model.forward=functools.partial(model.model.fastv_forward,fastv_config=dict(fastv_k=2,fastv_r=1-keep/576,image_token_start_index=start,image_token_length=576))
     if candidate:
+        if resume_only:
+            from .model_resume_probe import run as resume_probe
+            resume_probe(model,{'inputs':ids,'images':pixels},tokenizer,out)
+            return
         if selector_only:
             from .real_selector_probe import run as selector_probe
             selector_probe(model,{'inputs':ids,'images':pixels},folder,method,out)
@@ -160,7 +164,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--folder',required=True);p.add_argument('--method',required=True);p.add_argument('--out',required=True)
     p.add_argument('--candidate',help='Real-image diagnostic JSON; runs 1025 forcing steps and natural generation')
     p.add_argument('--selector-only',action='store_true')
-    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.candidate,a.selector_only)
+    p.add_argument('--resume-only',action='store_true')
+    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.candidate,a.selector_only,a.resume_only)
 
 
 if __name__=='__main__':main()

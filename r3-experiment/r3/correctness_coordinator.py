@@ -4,9 +4,9 @@ from pathlib import Path
 from .common import read,write,digest
 
 
-def run(folder,selectors_only=False,methods=None):
+def run(folder,selectors_only=False,methods=None,resume_only=False):
     lock=(folder/'correctness.lock').open('a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-    attempt=folder/'tests'/(('real-selectors-' if selectors_only else 'core-correctness-')+str(time.time_ns()));attempt.mkdir()
+    attempt=folder/'tests'/(('model-resume-' if resume_only else 'real-selectors-' if selectors_only else 'core-correctness-')+str(time.time_ns()));attempt.mkdir()
     candidates=[json.loads(s) for s in (folder/'data/existing-pools-v1/candidates_unvalidated.jsonl').read_text().splitlines()]
     row=min((r for r in candidates if r['task']=='DocVQA'),key=lambda r:digest(r['uid']))
     # Only image/question/options/provenance enter the diagnostic worker.
@@ -22,7 +22,7 @@ def run(folder,selectors_only=False,methods=None):
         if not set(methods)<={m for e,m in jobs}:raise ValueError('Unregistered diagnostic methods')
         jobs=[(e,m) for e,m in jobs if m in methods]
     state={'pid':os.getpid(),'attempt':str(attempt),'production_started':False,'results':[]}
-    def update(**kw):state.update(kw,updated_at=time.time());write(folder/('telemetry/real_selectors_state.json' if selectors_only else 'telemetry/correctness_state.json'),state)
+    def update(**kw):state.update(kw,updated_at=time.time());write(folder/('telemetry/model_resume_state.json' if resume_only else 'telemetry/real_selectors_state.json' if selectors_only else 'telemetry/correctness_state.json'),state)
     update(stage='running')
     for env,method in jobs:
         name=env+'-'+method;out=attempt/name
@@ -30,6 +30,7 @@ def run(folder,selectors_only=False,methods=None):
         command=[str(folder/('environment/native-'+env+'/bin/python')),'-u','-m',module,
                  '--folder',str(folder),'--method',method,'--out',str(out),'--candidate',str(candidate)]
         if selectors_only:command.append('--selector-only')
+        if resume_only:command.append('--resume-only')
         with (attempt/(name+'.log')).open('xb') as log:
             child=subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT)
             update(current=name,child_pid=child.pid)
@@ -43,4 +44,5 @@ def run(folder,selectors_only=False,methods=None):
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--selectors-only',action='store_true')
     p.add_argument('--methods',nargs='+')
-    a=p.parse_args();run(Path(a.folder),a.selectors_only,a.methods)
+    p.add_argument('--resume-only',action='store_true')
+    a=p.parse_args();run(Path(a.folder),a.selectors_only,a.methods,a.resume_only)
