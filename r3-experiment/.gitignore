@@ -1,0 +1,14 @@
+.local-preparation/
+__pycache__/
+*.pyc
+config.txt
+*.pem
+*.key
+.env
+.env.*
+models/
+data/
+runs/
+.venv*/
+*.log
+jobs.preview.json

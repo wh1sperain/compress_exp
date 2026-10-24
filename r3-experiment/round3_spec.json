@@ -1,0 +1,534 @@
+{
+  "protocol": "visual-compression-r3.0-native-rtxpro6000",
+  "created_date": "2026-10-22",
+  "status": "execution specification; no GPU inference performed by this package",
+  "supersedes": "visual-compression-r2.0",
+  "root_env": "COMPRESS_ROOT",
+  "default_root": "/root/autodl-tmp/Compress",
+  "run_subdir": "runs/visual-compression-r3",
+  "hardware": {
+    "gpu_count": 1,
+    "expected_name_contains": "RTX PRO 6000",
+    "expected_compute_capability": [
+      12,
+      0
+    ],
+    "minimum_total_memory_gib": 88,
+    "edition": "detect_and_record; do not infer power from brand",
+    "change_power_limit": false,
+    "change_mig": false
+  },
+  "repositories": {
+    "FastV": {
+      "url": "https://github.com/pkunlp-icler/FastV",
+      "revision": null,
+      "resolve_rule": "freeze full SHA during prepare, never use floating HEAD during generation"
+    },
+    "PriorTR": {
+      "url": "https://github.com/CodeChildCZJ/PriorTR",
+      "revision": "e442a4c14af1b333067a6b8310c9111cad922033"
+    },
+    "AgilePruner": {
+      "url": "https://github.com/cvsp-lab/AgilePruner",
+      "revision": "6829283ded10bdec58361512a32676c71bbd17d3"
+    },
+    "VisionZip": {
+      "url": "https://github.com/JIA-Lab-research/VisionZip",
+      "revision": null,
+      "resolve_rule": "freeze full SHA during prepare"
+    },
+    "LLaVA-Mini": {
+      "url": "https://github.com/ictnlp/LLaVA-Mini",
+      "revision": null,
+      "resolve_rule": "freeze full SHA during prepare"
+    }
+  },
+  "models": {
+    "llava7": {
+      "model_id": "liuhaotian/llava-v1.5-7b",
+      "revision": null,
+      "track": "same_weights_causal",
+      "context_limit": 4096,
+      "max_new_tokens": 2048,
+      "max_expanded_prompt_tokens": 2048,
+      "processor": "native CLIP336 pad; no Qwen min/max_pixels",
+      "visual_tokens_full": 576,
+      "conversation": "llava_v1",
+      "dtype": "bfloat16",
+      "stored_dtype_note": "author config float16; cast consistently for reference and optimized engines"
+    },
+    "qwen8": {
+      "model_id": "Qwen/Qwen3-VL-8B-Thinking",
+      "revision": null,
+      "track": "native_long_reasoning_bridge",
+      "runtime_context_limit": 65536,
+      "max_new_tokens": 32768,
+      "max_expanded_prompt_tokens": 8192,
+      "processor": {
+        "min_pixels": 262144,
+        "max_pixels": 4194304
+      },
+      "conversation": "official_chat_template",
+      "dtype": "bfloat16",
+      "allowed_methods": [
+        "Full",
+        "PriorTR"
+      ]
+    },
+    "mini8": {
+      "model_id": "ICTNLP/llava-mini-llama-3.1-8b",
+      "revision": null,
+      "track": "trained_architecture_descriptive",
+      "context_limit": "read_checkpoint_and_author_loader",
+      "max_new_tokens": 2048,
+      "processor": "official single-image checkpoint path",
+      "conversation": "llava_llama_3_1",
+      "dtype": "bfloat16",
+      "allow_full_counterfactual": false
+    },
+    "qwen4": {
+      "model_id": "Qwen/Qwen3-VL-4B-Thinking",
+      "revision": null,
+      "track": "small_size_bridge_only",
+      "runtime_context_limit": 65536,
+      "max_new_tokens": 32768,
+      "max_expanded_prompt_tokens": 8192,
+      "processor": {
+        "min_pixels": 262144,
+        "max_pixels": 4194304
+      },
+      "conversation": "official_chat_template",
+      "dtype": "bfloat16",
+      "allowed_methods": [
+        "Full",
+        "PriorTR"
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "id": "DocVQA",
+      "source": "old frozen 500-question pool"
+    },
+    {
+      "id": "InfographicVQA",
+      "source": "old frozen 500-question pool"
+    },
+    {
+      "id": "ChartQA-human-test",
+      "source": "vis-nlp/ChartQA official test_human.json"
+    },
+    {
+      "id": "GQA-balanced-val",
+      "source": "official balanced validation"
+    },
+    {
+      "id": "MathVista-testmini",
+      "source": "AI4Math/MathVista testmini"
+    }
+  ],
+  "sampling": {
+    "main_per_task": 100,
+    "calibration_per_task": 20,
+    "one_question_per_image": true,
+    "question_hash_prefix": "r2-question|",
+    "image_hash_prefix": "r2-image|",
+    "apply_native_input_eligibility_before_selection": true,
+    "read_outputs": false,
+    "repeats": [
+      0,
+      1,
+      2
+    ],
+    "seed_rule": "(1234 + int(sha256(uid)[:8],16) + 1000003*repeat_id) % (2**31-1)"
+  },
+  "generation": {
+    "do_sample": true,
+    "temperature": 1.0,
+    "top_k": 20,
+    "top_p": 0.95,
+    "repetition_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "min_new_tokens": 0,
+    "stop_on_repetition": false,
+    "stop_on_final_marker": false,
+    "quantization": false,
+    "kv_quantization": false,
+    "sampler": "per-request PCG64-generated uniforms, indexed by generated step, GPU top-k/top-p/inverse-CDF; validated CPU reference",
+    "sampler_sort": "logit descending, token id ascending for ties",
+    "max_new_tokens": "per-model not global"
+  },
+  "prompt": {
+    "suffix": "\n\nAfter reasoning, end your response with one line in this exact format: FINAL ANSWER: <answer>\nGive only the requested answer after FINAL ANSWER:, without extra explanation on that final line.",
+    "multiple_choice_suffix": "For this multiple-choice question, give only the option letter after FINAL ANSWER:.",
+    "system": "native conversation template only",
+    "special_think_tags_for_llava_or_mini": false
+  },
+  "conditions": {
+    "Full": {
+      "method": "Full",
+      "keep_ratio": 1.0,
+      "compression_enabled": false
+    },
+    "FastV50": {
+      "method": "FastV",
+      "keep_ratio": 0.5,
+      "target_visual_tokens_llava": 288,
+      "compression_enabled": true,
+      "prune_after_layers": 2,
+      "variant": "author_static_KV",
+      "query_scope": "author_last_prompt_token",
+      "native_cache_policy": "freeze_from_author_reference"
+    },
+    "FastV25": {
+      "method": "FastV",
+      "keep_ratio": 0.25,
+      "target_visual_tokens_llava": 144,
+      "compression_enabled": true,
+      "prune_after_layers": 2,
+      "variant": "author_static_KV",
+      "query_scope": "author_last_prompt_token",
+      "native_cache_policy": "freeze_from_author_reference"
+    },
+    "PriorTR50": {
+      "method": "PriorTR",
+      "keep_ratio": 0.5,
+      "target_visual_tokens_llava": 288,
+      "compression_enabled": true,
+      "prune_after_layers": 3,
+      "query_scope": "native_backbone_author_question_scope",
+      "native_cache_policy": "freeze_from_author_reference",
+      "keep_tokens_overrides_ratio": true
+    },
+    "PriorTR25": {
+      "method": "PriorTR",
+      "keep_ratio": 0.25,
+      "target_visual_tokens_llava": 144,
+      "compression_enabled": true,
+      "prune_after_layers": 3,
+      "query_scope": "native_backbone_author_question_scope",
+      "native_cache_policy": "freeze_from_author_reference",
+      "keep_tokens_overrides_ratio": true
+    },
+    "AgilePruner50": {
+      "method": "AgilePruner",
+      "keep_ratio": 0.5,
+      "target_visual_tokens_llava": 288,
+      "compression_enabled": true,
+      "prune_after_layers": 0,
+      "attention": "native_CLIP_CLS_penultimate",
+      "erank_reference": 90.0,
+      "tau_max": 0.25
+    },
+    "AgilePruner25": {
+      "method": "AgilePruner",
+      "keep_ratio": 0.25,
+      "target_visual_tokens_llava": 144,
+      "compression_enabled": true,
+      "prune_after_layers": 0,
+      "attention": "native_CLIP_CLS_penultimate",
+      "erank_reference": 90.0,
+      "tau_max": 0.25
+    },
+    "VisionZip50": {
+      "method": "VisionZip",
+      "keep_ratio": 0.5,
+      "target_visual_tokens_llava": 288,
+      "compression_enabled": true,
+      "prune_after_layers": 0,
+      "dominant": 242,
+      "contextual": 45,
+      "cls_tokens": 1,
+      "training": false,
+      "budget_rule": "D+C+CLS=K; official aggregation/order unchanged"
+    },
+    "VisionZip25": {
+      "method": "VisionZip",
+      "keep_ratio": 0.25,
+      "target_visual_tokens_llava": 144,
+      "compression_enabled": true,
+      "prune_after_layers": 0,
+      "dominant": 121,
+      "contextual": 22,
+      "cls_tokens": 1,
+      "training": false,
+      "budget_rule": "D+C+CLS=K; official aggregation/order unchanged"
+    },
+    "MiniNative": {
+      "method": "LLaVA-Mini",
+      "compression_enabled": true,
+      "keep_ratio": null,
+      "learned_query_count": "read_checkpoint_and_measure_then_freeze",
+      "matched_full_available": false,
+      "change_query_count": false
+    }
+  },
+  "main_tracks": [
+    {
+      "id": "A",
+      "model": "llava7",
+      "conditions": [
+        "Full",
+        "FastV50",
+        "FastV25",
+        "PriorTR50",
+        "PriorTR25",
+        "AgilePruner50",
+        "AgilePruner25",
+        "VisionZip50",
+        "VisionZip25"
+      ],
+      "questions": 500,
+      "repeats": 3,
+      "records": 13500
+    },
+    {
+      "id": "B",
+      "model": "qwen8",
+      "conditions": [
+        "Full",
+        "PriorTR50",
+        "PriorTR25"
+      ],
+      "questions": 500,
+      "repeats": 3,
+      "records": 4500
+    },
+    {
+      "id": "C",
+      "model": "mini8",
+      "conditions": [
+        "MiniNative"
+      ],
+      "questions": 500,
+      "repeats": 3,
+      "records": 1500
+    }
+  ],
+  "panels": {
+    "P100": "20/task lowest sha256(r3-panel|uid)",
+    "B100": "50 each DocVQA/InfographicVQA lowest sha256(r3-bridge|uid)",
+    "M60": "30 each DocVQA/InfographicVQA, sha256(r3-mechanism|uid), evidence annotation eligibility before seeing outputs"
+  },
+  "controls": [
+    {
+      "id": "size4b",
+      "model": "qwen4",
+      "panel": "B100",
+      "questions": 100,
+      "conditions": [
+        "Full",
+        "PriorTR25"
+      ],
+      "repeats": 3,
+      "records": 600
+    },
+    {
+      "id": "random",
+      "model": "llava7",
+      "panel": "P100",
+      "questions": 100,
+      "conditions": [
+        "Random25_L2"
+      ],
+      "repeats": 3,
+      "records": 300
+    },
+    {
+      "id": "ratio",
+      "model": "llava7",
+      "panel": "P100",
+      "questions": 100,
+      "conditions": [
+        "FastV75",
+        "FastV37p5"
+      ],
+      "repeats": 3,
+      "records": 600
+    },
+    {
+      "id": "temperature",
+      "model": "qwen8",
+      "panel": "B100",
+      "questions": 100,
+      "conditions": [
+        "Full_T0p6",
+        "PriorTR50_T0p6",
+        "PriorTR25_T0p6"
+      ],
+      "repeats": 3,
+      "records": 900
+    }
+  ],
+  "mechanism": {
+    "model": "qwen8",
+    "base_condition": "PriorTR25",
+    "panel": "M60",
+    "questions": 60,
+    "repeats": 3,
+    "prune_after_layers": 3,
+    "new_rescue_arms": [
+      "ValueRescue",
+      "ValueRandom",
+      "BindingRescue",
+      "BindingRandom"
+    ],
+    "rescue_records": 720,
+    "forced_reasoning_budgets": [
+      256,
+      512,
+      1024
+    ],
+    "answer_budget": 128,
+    "stop_records": 540,
+    "oracle_annotations": true
+  },
+  "production": {
+    "reference": "native author prefill and HF reference decode; same dtype and sampler",
+    "preferred": "validated native prefill + continuous batched paged BF16 decode",
+    "fallback": "validated HF batched reference; if batching invariants fail use B1 and mark performance gate failed",
+    "one_resident_model": true,
+    "tensor_parallel_size": 1,
+    "prefill_chunking": false,
+    "per_layer_page_tables": true,
+    "memory_budget_rule": "M_kv=floor_to_pages(min(0.90*M_total,M_total-8GiB)-M_resident_nonKV_peak); resident peak includes weights, graph pools, temporaries and feature cache",
+    "cache_pool_gib_initial_candidates": [
+      40,
+      48,
+      56
+    ],
+    "decode_concurrency_candidates": [
+      4,
+      8,
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "prefill_batch_token_candidates": [
+      2048,
+      4096,
+      8192
+    ],
+    "page_size_candidates": [
+      16,
+      32,
+      64
+    ],
+    "cuda_graph_batch_candidates": [
+      1,
+      2,
+      4,
+      8,
+      16,
+      24,
+      32,
+      48,
+      64
+    ],
+    "gpu_feature_cache_gib_cap": 2,
+    "admission": "worst-case native per-layer prompt KV plus entire remaining output reservation; reuse COW only when validated",
+    "cpu_kv_offload_primary": false,
+    "stop_long_jobs_for_speed": false,
+    "benchmark_objective": "minimum median makespan on fixed calibration workloads, not highest GPU-util",
+    "tie_rule": "within 2% makespan choose less memory then fewer live requests",
+    "optional_two_queue_candidate": {
+      "enabled_by_default": false,
+      "prefix_generated_token_cutoff": 2048,
+      "long_queue_output_cap_unchanged": true,
+      "checkpoint": "lossless per-layer KV + semantic positions + original prefix + RNG step",
+      "max_pending_cpu_kv_gib": 64,
+      "max_fraction_available_host_ram": 0.25,
+      "max_new_requests_between_continuation_checks": 32,
+      "approval": "same native/long/natural gates; select only if measured fixed-workload makespan improves"
+    },
+    "default_gpu_profile_initial": {
+      "max_live_requests": 16,
+      "prefill_token_budget": 4096,
+      "page_size": 32,
+      "kv_pool_gib": 48,
+      "cuda_graphs": "enable only after smoke and parity; starting point not measured optimum"
+    }
+  },
+  "quality_gates": {
+    "max_teacher_forced_kl": 0.02,
+    "max_teacher_forced_tv": 0.08,
+    "long_prefix_tests": true,
+    "max_context_stress": true,
+    "selector_identity": true,
+    "uniform_rng_independent_of_batch_order": true,
+    "native_natural_panel": {
+      "questions": 100,
+      "repeats": 3,
+      "llava_conditions": [
+        "Full",
+        "FastV25",
+        "PriorTR25",
+        "AgilePruner25",
+        "VisionZip25"
+      ],
+      "qwen_conditions": [
+        "Full",
+        "PriorTR25"
+      ],
+      "mini_conditions": [
+        "MiniNative"
+      ],
+      "equivalence_95CI_log1p_length_margin": 0.1,
+      "equivalence_95CI_cap_rate_margin": 0.05,
+      "equivalence_95CI_task_score_margin": 0.03,
+      "inconclusive": "not certified; use reference or independent new preregistered validation, never relax after results"
+    }
+  },
+  "statistics": {
+    "primary_population": "all paired eligible questions; not correct-only or naturally-ended-only",
+    "bootstrap_replicates": 20000,
+    "bootstrap_seed": 20261022,
+    "cluster": "image within task, retain all methods/seeds",
+    "average_repeats_first": true,
+    "A_primary_methods": [
+      "FastV25",
+      "PriorTR25",
+      "AgilePruner25",
+      "VisionZip25"
+    ],
+    "A_primary_endpoints": [
+      "paired_total_generated_token_difference",
+      "severe_over2_total_generated_probability"
+    ],
+    "A_family_size": 8,
+    "B_primary_endpoints": [
+      "paired_reasoning_token_difference",
+      "severe_over2_reasoning_probability"
+    ],
+    "B_family_size": 2,
+    "Mini_causal_inflation_comparison": false,
+    "pool_raw_lengths_across_models": false
+  },
+  "expected_records": {
+    "main_A": 13500,
+    "main_B": 4500,
+    "main_C": 1500,
+    "main_total": 19500,
+    "controls": 2400,
+    "rescue": 720,
+    "stop": 540,
+    "core_with_controls": 21900,
+    "complete": 23160
+  },
+  "failure_policy": {
+    "automatic_quantization": false,
+    "lower_resolution_on_oom": false,
+    "shorten_output_on_oom": false,
+    "reroll_successful_job": false,
+    "tune_batch_on_calibration_oom": true,
+    "mutate_official_algorithm_for_speed": false,
+    "new_source_or_backend_requires_new_gate": true
+  },
+  "authoritative_files": [
+    "AGENT_RUNBOOK_R3.md",
+    "GPU_EXECUTION_R3.md",
+    "SOURCES.md"
+  ]
+}

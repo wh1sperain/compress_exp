@@ -1,0 +1,44 @@
+import unittest
+import numpy as np
+from r3.scoring import extract,nls,r10
+from r3.sampling import cpu_sample,uniforms
+from r3.common import seed
+from r3.build_jobs import build
+from r3.manifest import TASKS,select,split_labels
+from r3.rescue import masks
+from pathlib import Path
+import json
+
+class CoreTests(unittest.TestCase):
+    def test_required_scores(self):
+        for a,b,x in [('11 a.m.','11 a.m.',1),('3 Million Users','3 million',.6),('34 Million','3 million',.9)]:
+            p,_=extract('FINAL ANSWER: '+a);self.assertAlmostEqual(nls(p,[b]),x)
+    def test_last_marker_and_units(self):
+        self.assertEqual(extract('FINAL ANSWER: 2\nFINAL ANSWER: $32%.')[0],'$32%.')
+        self.assertIsNone(extract('I guess 42')[0])
+        self.assertIsNone(extract(r'\boxed{42')[0])
+        self.assertEqual(extract(r'\boxed{a{b}}')[0],'a{b}')
+    def test_ties_and_stream(self):
+        self.assertEqual(cpu_sample([0,0,0],0,top_k=2),0)
+        self.assertEqual(cpu_sample([0,0,0],.75,top_k=2),1)
+        np.testing.assert_equal(uniforms(seed('x',0),10)[5:],uniforms(seed('x',0),10)[5:])
+        self.assertNotEqual(seed('x',0),seed('x',1))
+    def test_repetition(self):
+        self.assertEqual(r10('short text'),0)
+        self.assertGreater(r10('hello '*100),.5)
+    def test_jobs_full_registration(self):
+        spec=json.loads(Path('round3_spec.json').read_text())
+        rows=[{'uid':f'{t}:{i}','task':t,'image_sha256':f'{t}-image-{i}'} for t in TASKS for i in range(100)]
+        mechanism=[r for r in rows if r['task'] in TASKS[:2] and int(r['uid'].split(':')[-1])<30]
+        jobs,counts=build(spec,rows,mechanism,'test-profile')
+        self.assertEqual(len(jobs),23160)
+        self.assertEqual(counts,dict(main=19500,controls=2400,rescue=720,stop=540))
+        self.assertTrue(all('answer' not in j for j in jobs))
+    def test_rescue_matched_controls(self):
+        result=masks('u',[0,1,2,3],[4],[5],list(range(10)))
+        for label in ('Value','Binding'):
+            self.assertEqual(result[label+'Rescue']['removed'],result[label+'Random']['removed'])
+            self.assertEqual(len(result[label+'Rescue']['selected_indices']),4)
+            self.assertFalse(set(result[label+'Random']['added'])&{4,5})
+        self.assertEqual(result,masks('u',[0,1,2,3],[4],[5],list(range(10))))
+if __name__=='__main__':unittest.main()
