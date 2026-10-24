@@ -8,7 +8,7 @@ from pathlib import Path
 from .common import read,write,digest,code_hash,Blocked
 from .runner import publish_once
 
-def run(folder):
+def run(folder,resume_attempt=None):
     folder=Path(folder);release=Path(__file__).resolve().parent.parent
     import fcntl
     with (folder/'batch-ready.lock').open('a') as lock:
@@ -30,7 +30,7 @@ def run(folder):
             ('llava','numeric-VisionZip25','r3.batch_backend_probe',['--model','llava7','--condition','VisionZip25','--steps','32','--batch-size','4']),
             ('qwen','numeric-Qwen4-Prior25','r3.batch_backend_probe',['--model','qwen4','--condition','PriorTR25','--steps','32','--batch-size','4']),
             ('llava','memory-llava','r3.batch_resource_probe',['--model','llava7','--condition','Full','--batch-size','4']),
-            ('qwen','memory-qwen','r3.batch_resource_probe',['--model','qwen8','--condition','Full','--batch-size','4']),
+            ('qwen','memory-qwen','r3.batch_resource_probe',['--model','qwen8','--condition','Full','--batch-size','3']),
             ('mini','memory-mini','r3.batch_resource_probe',['--model','mini8','--condition','MiniNative','--batch-size','4']),
             ('llava','slots-llava','r3.batch_scheduler_smoke',['--model','llava7','--condition','Full']),
             ('mini','slots-mini','r3.batch_scheduler_smoke',['--model','mini8','--condition','MiniNative']),
@@ -38,6 +38,16 @@ def run(folder):
         ]
         try:
             for environment,name,module,args in checks:
+                if resume_attempt:
+                    old=Path(resume_attempt)/name/'receipt.json'
+                    if old.exists() and read(old).get('status')=='PASS':
+                        r=read(old)
+                        old_release=read(Path(resume_attempt)/'state.json')['release']
+                        item=dict(path=str(old),sha256=digest(old.read_bytes()),source_release=old_release,source_code_sha256=r['code_sha256'])
+                        if module=='r3.batch_backend_probe':numeric.append(item)
+                        else:proof.append(item)
+                        state['results'].append(dict(name=name,reused_pass=str(old),exit_code=0));update()
+                        continue
                 destination=attempt/name
                 command=[str(folder/('environment/native-'+environment+'/bin/python')),'-u','-m',module,
                          '--folder',str(folder),'--out',str(destination),*args]
@@ -53,6 +63,7 @@ def run(folder):
                 else:proof.append(item)
             from .execution_acceptance import BATCH_FILES,validate_batch_profile
             profile=dict(backend='native-padded-batch',dtype='bfloat16',kv_dtype='bfloat16',max_live_requests=4,
+                max_live_requests_by_model={'qwen8':3,'qwen4':3},
                 kv_scratch_factor=3,memory_admission='full_remaining_cap_with_scratch',persistent_model=True,
                 parallel_model_copies=False,continuous_slot_refill=True,paged_kv=False,cuda_graph=False,
                 prefill_policy='complete per-request author native prefill',parsing_enabled=False,scoring_enabled=False,
@@ -71,4 +82,4 @@ def run(folder):
             publish_once(attempt/('failure-'+str(time.time_ns())+'.json'),state);raise
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--folder',required=True);a=p.parse_args();run(a.folder)
+    p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--resume-attempt');a=p.parse_args();run(a.folder,a.resume_attempt)

@@ -38,7 +38,7 @@ class Scheduler:
     def __init__(self, session, profile):
         import torch
         self.session=session;self.model=session.model;self.backend=backend_for(session)
-        self.profile=profile;self.maximum=int(profile['max_live_requests'])
+        self.profile=profile;self.maximum=int(profile.get('max_live_requests_by_model',{}).get(session.key,profile['max_live_requests']))
         if not 1<=self.maximum<=32:raise Blocked('Unapproved live slot count')
         if profile.get('dtype')!='bfloat16' or profile.get('kv_dtype')!='bfloat16':raise Blocked('Unapproved precision')
         self.scratch=float(profile.get('kv_scratch_factor',3))

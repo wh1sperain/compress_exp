@@ -18,7 +18,8 @@ def run(folder,model,condition,out):
     rows=[json.loads(s) for s in (folder/'manifests/frozen-inputs-v1/calibration_manifest.jsonl').read_text().splitlines()]
     selected=choose_rows(rows,5)
     session=NativeSession(folder,model,condition,out/'loading.json')
-    profile=dict(backend='native-padded-batch',dtype='bfloat16',kv_dtype='bfloat16',max_live_requests=4,kv_scratch_factor=3)
+    profile=dict(backend='native-padded-batch',dtype='bfloat16',kv_dtype='bfloat16',max_live_requests=4,kv_scratch_factor=3,
+                 max_live_requests_by_model={'qwen8':3,'qwen4':3})
     scheduler=Scheduler(session,profile);requests=[]
     for row in selected:
         key=digest('scheduler-smoke|'+model+'|'+condition+'|'+row['uid'])

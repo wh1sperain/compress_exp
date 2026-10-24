@@ -127,7 +127,7 @@ def run(folder,model,condition,out,batch_size=4,scratch_factor=3):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--model',required=True)
     p.add_argument('--condition',required=True);p.add_argument('--out',required=True)
-    p.add_argument('--batch-size',type=int,choices=[2,4],default=4);p.add_argument('--scratch-factor',type=float,default=3)
+    p.add_argument('--batch-size',type=int,choices=[2,3,4],default=4);p.add_argument('--scratch-factor',type=float,default=3)
     a=p.parse_args();result=run(a.folder,a.model,a.condition,a.out,a.batch_size,a.scratch_factor)
     print(json.dumps({k:result[k] for k in ['status','model','condition','batch_size','original_output_cap','diagnostic_only']}))
     return 0 if result['status']=='PASS' else 1
