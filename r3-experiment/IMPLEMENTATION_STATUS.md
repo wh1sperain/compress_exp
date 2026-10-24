@@ -68,3 +68,5 @@
 2026-10-24 10:52：ChartQA raw官方地址TLS超时，原失败与锁保留；有界网络诊断确认加速环境下相同地址200，直连超时。显式恢复原固定来源。GQA官网页面503但Stanford官方questions1.2.zip返回200（1498616372字节）；新增官方问题/图像ZIP后台准备，文件SHA与ZIP CRC校验，只解出balanced-val引用图像，保留原压缩包，不预抽样；盘空间门槛32GiB。21项CPU和语法检查通过；数据获取不是输入验收或正式研究。
 
 2026-10-24 11:07：ChartQA官方源1250题/625图完成（固定044eabfc306abfe9340c5741f0093aefc5973d06），GQA仍正常下载问题包。目标Qwen处理器实测size shortest_edge262144/longest_edge4194304、patch16/merge2。新增CPU原生输入审计：图像哈希核对、实际processor展开prompt、grid/token数一致性、8192门槛、处理器/tokenizer/template/prompt来源哈希、无答案审计输出；不生成答案，不预抽样。22项CPU测试通过。A/C输入审计与正式runner、长轨迹门槛仍未完成。
+
+2026-10-24 11:22：ChartQA全部1250题Qwen原生输入审计退出0。GQA长连接在163577856字节后ChunkedEncodingError，原partial与失败回执保留。新增4路8MiB HTTP Range传输：服务器206/Content-Range/ETag或Last-Modified验证、分段SHA、不可变成功块、完整组装SHA及双份空间预留；不做无界重试，不改来源/采样。24项CPU测试通过，含模拟传输组装与拒绝错误字节范围/变化来源。

@@ -18,6 +18,30 @@ from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_range_transfer_assembles_verified_archive(self):
+        from r3.range_download import transfer
+        from hashlib import sha256 as hash_bytes
+        data=b'fixture archive bytes'
+        class Response:
+            status_code=206
+            def __init__(self,start,end):
+                self.headers={'Content-Range':f'bytes {start}-{end}/{len(data)}','ETag':'fixed'}
+                self.content=data[start:end+1]
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+        def get(url,headers,**kwargs):
+            start,end=map(int,headers['Range'].split('=')[1].split('-'))
+            return Response(start,end)
+        with tempfile.TemporaryDirectory() as d,patch('requests.get',get),patch('shutil.disk_usage',return_value=SimpleNamespace(free=100*1024**3)):
+            target=Path(d)/'archive.zip';receipt=transfer('https://example.invalid/data',target,lambda **kw:None)
+            self.assertEqual(target.read_bytes(),data)
+            self.assertEqual(receipt['sha256'],hash_bytes(data).hexdigest())
+    def test_ranges_reject_wrong_bytes_or_changed_source(self):
+        from r3.range_download import validate_range
+        headers={'Content-Range':'bytes 8-15/32','ETag':'stable'}
+        validate_range(headers,8,15,32,('ETag','stable'))
+        with self.assertRaises(Blocked):validate_range(headers,0,7,32,('ETag','stable'))
+        with self.assertRaises(Blocked):validate_range(headers,8,15,32,('ETag','changed'))
     def test_input_prompt_excludes_labels_and_preserves_options(self):
         from r3.audit_qwen_inputs import question_text
         text=question_text({'question':'Which?','options':['red','blue'],'answer':'SECRET'},'\nSUFFIX')

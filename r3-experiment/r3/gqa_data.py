@@ -23,20 +23,11 @@ def acquire(folder):
                 for b in iter(lambda:f.read(8*1024*1024),b''):h.update(b)
             if h.hexdigest()!=expected:raise Blocked('Existing archive hash mismatch')
             return target
-        import shutil
-        if shutil.disk_usage(root).free<32*1024**3:raise Blocked('Need 32 GiB free for official archive preparation')
-        partial=root/(name+'.partial-'+str(time.time_ns()));h=hashlib.sha256();n=0;last=0
         update(stage='download',file=name,bytes=0)
-        with requests.get(url,stream=True,timeout=(20,120)) as r:
-            r.raise_for_status();expected=int(r.headers.get('content-length',0))
-            with partial.open('xb') as f:
-                for b in r.iter_content(4*1024*1024):
-                    f.write(b);h.update(b);n+=len(b)
-                    if time.time()-last>10:update(bytes=n,expected_bytes=expected);last=time.time()
-        if expected and n!=expected:raise Blocked('Incomplete official archive')
-        if not zipfile.is_zipfile(partial):raise Blocked('Official response is not ZIP')
-        partial.rename(target)
-        write(receipt,dict(url=url,sha256=h.hexdigest(),bytes=n,source_version='GQA-v1.2'))
+        from .range_download import transfer
+        info=transfer(url,target,update)
+        if not zipfile.is_zipfile(target):raise Blocked('Official response is not ZIP')
+        write(receipt,dict(info,source_version='GQA-v1.2'))
         return target
     try:
         update()
