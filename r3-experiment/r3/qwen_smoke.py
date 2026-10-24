@@ -6,6 +6,14 @@ from pathlib import Path
 from .common import read,write,digest,Blocked
 
 
+def loading_receipt(value):
+    """Preserve HF loading diagnostics, including v5 set-valued key lists."""
+    if isinstance(value,dict):return {k:loading_receipt(v) for k,v in value.items()}
+    if isinstance(value,set):return [loading_receipt(v) for v in sorted(value)]
+    if isinstance(value,(list,tuple)):return [loading_receipt(v) for v in value]
+    return value
+
+
 def activate(folder):
     entry=read(folder/'manifests/source_lock.json')['PriorTR']
     root=Path(entry['path'])
@@ -48,6 +56,7 @@ def run(folder,method,out,model_key):
     model,info=VTRQwen3VLForConditionalGeneration.from_pretrained(
         lock['path'],dtype=torch.bfloat16,device_map={'':'cuda:0'},
         attn_implementation='eager',local_files_only=True,output_loading_info=True)
+    info=loading_receipt(info)
     write(out.with_suffix('.loading.json'),info)
     if any(info.get(k) for k in ('missing_keys','unexpected_keys','mismatched_keys','error_msgs')):
         raise Blocked('Qwen checkpoint loading mismatch')

@@ -18,6 +18,14 @@ from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_hf5_loading_receipt_preserves_failures(self):
+        from r3.qwen_smoke import loading_receipt
+        info={'missing_keys':{'b','a'},'unexpected_keys':set(),'mismatched_keys':{'x':((2,),(3,))}}
+        got=json.loads(json.dumps(loading_receipt(info)))
+        self.assertEqual(got['missing_keys'],['a','b'])
+        self.assertEqual(got['unexpected_keys'],[])
+        self.assertEqual(got['mismatched_keys'],{'x':[[2],[3]]})
+        self.assertTrue(got['missing_keys'])
     def test_cache_position_bridge_preserves_arguments(self):
         calls=[];cache=object();position=object();embedding=object()
         class FakeLlama:
