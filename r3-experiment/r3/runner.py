@@ -36,6 +36,11 @@ def load_plan(plan_path,folder):
               'source_lock_sha256':digest((folder/'manifests/source_lock.json').read_bytes()),
               'weights_lock_sha256':digest((folder/'manifests/model_weights_lock.json').read_bytes())}
     gates=[]
+    rows=[json.loads(s) for s in manifest.read_text(encoding='utf-8').splitlines() if s.strip()]
+    if plan.get('supplemental_audit_path'):
+        from .supplemental_inputs import attach
+        rows,extra=attach(rows,plan['supplemental_audit_path'],plan['supplemental_status_path'])
+        identity.update(extra)
     for name in ('native_gate_path','engine_gate_path'):
         gate=require_gate(plan[name],spec_sha,profile_sha)
         gates.append(gate)
@@ -43,7 +48,6 @@ def load_plan(plan_path,folder):
     if plan.get('spec_sha256')!=spec_sha or plan.get('engine_sha256')!=profile_sha:
         raise Blocked('Plan spec/profile changed')
     if plan.get('code_sha256')!=code_hash():raise Blocked('Plan code changed')
-    rows=[json.loads(s) for s in manifest.read_text(encoding='utf-8').splitlines() if s.strip()]
     by_uid={r['uid']:r for r in rows}
     if len(by_uid)!=len(rows):raise Blocked('Duplicate manifest uid')
     spec=read(spec_path)
@@ -56,6 +60,8 @@ def load_plan(plan_path,folder):
     if len({j['job_key'] for j in plan['jobs']})!=len(plan['jobs']):raise Blocked('Duplicate registered job')
     for job in plan['jobs']:
         if job!=expected.get(job['job_key']):raise Blocked('Unregistered or modified job')
+        if job['model']=='qwen4' and 'qwen4' not in by_uid[job['uid']]['native_inputs']:
+            raise Blocked('Qwen4 supplemental audit required')
         scope=job['model']+'/'+job['condition'].removesuffix('_T0p6')
         if any(scope not in gate.get('certified_conditions',[]) for gate in gates):
             raise Blocked('Condition outside gate certification scope')
@@ -64,8 +70,8 @@ def load_plan(plan_path,folder):
 
 def supported(job):
     condition=job['condition'].removesuffix('_T0p6')
-    allowed={'llava7':{'Full','FastV50','FastV25','PriorTR50','PriorTR25','AgilePruner50','AgilePruner25','VisionZip50','VisionZip25'},
-             'qwen8':{'Full','PriorTR50','PriorTR25'},'mini8':{'MiniNative'}}
+    allowed={'llava7':{'Full','FastV50','FastV25','FastV75','FastV37p5','Random25_L2','PriorTR50','PriorTR25','AgilePruner50','AgilePruner25','VisionZip50','VisionZip25'},
+             'qwen8':{'Full','PriorTR50','PriorTR25'},'qwen4':{'Full','PriorTR25'},'mini8':{'MiniNative'}}
     return condition in allowed.get(job['model'],set()) and job['stage'] in ('main','controls')
 
 

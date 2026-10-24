@@ -8,6 +8,7 @@ import json
 import types
 from pathlib import Path
 from .common import read, digest, Blocked
+from .control_adapters import uses_fastv_runtime,configure_fastv_control
 
 
 def processor_hash_for_audit(config,expected):
@@ -40,7 +41,7 @@ class NativeSession:
             from .native_smoke import run
             self.model,self.tokenizer,self.vision,self.loading,self.paths=run(
                 self.folder,self.condition,Path(receipt),load_only=True)
-            if self.condition.startswith('FastV'):
+            if uses_fastv_runtime(self.condition):
                 from .compat import llava_forward_with_cache_position
                 self.model.forward=types.MethodType(llava_forward_with_cache_position,self.model)
 
@@ -86,26 +87,27 @@ class NativeSession:
             processor_raw,processor_sha=processor_hash_for_audit(self.vision.image_processor.to_dict(),audit['processor_sha256'])
             tokenizer_sha=digest(json.dumps(self.tokenizer.get_vocab(),sort_keys=True))
             inputs={'inputs':ids.unsqueeze(0).to(self.model.device),'images':pixels}
-            if self.condition.startswith('FastV'):
-                # Position depends on each actual prompt; never reuse a previous question's index.
-                keep={'FastV50':288,'FastV25':144}.get(self.condition)
-                if keep is None:raise Blocked('Uncertified FastV condition')
-                self.model.model.forward=functools.partial(self.model.model.fastv_forward,
-                    fastv_config=dict(fastv_k=2,fastv_r=1-keep/576,
-                        image_token_start_index=int((ids==constants.IMAGE_TOKEN_INDEX).nonzero()[0]),image_token_length=576))
+            if uses_fastv_runtime(self.condition):
+                control=configure_fastv_control(self.model,self.condition,
+                    int((ids==constants.IMAGE_TOKEN_INDEX).nonzero()[0]),uid=row['uid'],
+                    source_lock=self.folder/'manifests/source_lock.json')
         prompt_sha=digest(json.dumps(ids.tolist()))
         for key,value in [('prompt_sha256',prompt_sha),('processor_sha256',processor_sha),
                           ('tokenizer_sha256',tokenizer_sha),('visual_tokens',visual),('expanded_prompt_tokens',expanded)]:
             if key=='tokenizer_sha256' and self.key=='mini8' and key not in audit:
                 continue  # Legacy Mini audit binds tokenizer via the frozen model source and prompt IDs.
             if audit.get(key)!=value:raise Blocked('Runtime input differs from audit: '+key)
-        return inputs,{'prompt_sha256':prompt_sha,'full_visual_tokens':visual,'full_prompt_tokens':expanded,
+        metadata={'prompt_sha256':prompt_sha,'full_visual_tokens':visual,'full_prompt_tokens':expanded,
                        'runtime_processor_sha256':processor_raw,'audited_processor_sha256':processor_sha}
+        if uses_fastv_runtime(self.condition):metadata['control_evidence']=control
+        return inputs,metadata
 
     def generate(self,row,job,checkpoint):
         from .reference_stream import generate_native
         from .correctness_probe import cache_lengths
         inputs,metadata=self.prepare(row)
+        if self.condition=='Random25_L2' and job.get('config',{}).get('mask_seed')!=metadata['control_evidence']['mask_seed']:
+            raise Blocked('Random control mask seed differs from registered job')
         caches=[]
         def capture(module,args,output):
             lengths=cache_lengths(output.past_key_values)

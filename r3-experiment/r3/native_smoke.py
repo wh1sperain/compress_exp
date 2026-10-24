@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from .common import read,write,Blocked,digest
 from .native_sources import visionzip_arguments
+from .control_adapters import uses_fastv_runtime,FASTV_KEEP,configure_fastv_control
 
 
 def activate(folder,method):
@@ -20,7 +21,7 @@ def activate(folder,method):
     sources=read(folder/'manifests/source_lock.json')
     names=['LLaVA-Mini'] if method=='MiniNative' else ['AgilePruner'] if method.startswith('Agile') else ['PriorTR']
     if method.startswith('VisionZip'):names+=['VisionZip']
-    if method.startswith('FastV'):names+=['FastV']
+    if uses_fastv_runtime(method):names+=['FastV']
     paths={}
     for name in names:
         entry=sources[name];root=Path(entry['path']);paths[name]=root
@@ -31,7 +32,7 @@ def activate(folder,method):
     elif method.startswith('Agile'):sys.path.insert(0,str(paths['AgilePruner']))
     else:sys.path.insert(0,str(paths['PriorTR']/'image/LLaVA'))
     if method.startswith('VisionZip'):sys.path.insert(0,str(paths['VisionZip']))
-    if method.startswith('FastV'):
+    if uses_fastv_runtime(method):
         sys.path.insert(0,str(paths['FastV']/'src/FastV/llava-hf/transformers/src'))
     return paths
 
@@ -62,7 +63,7 @@ def run(folder,method,out,candidate=None,selector_only=False,resume_only=False,l
     # This author constructor flag controls eager loading; inference is frozen.
     if mini:cfg.unfreeze_mm_vision_tower=True
     if not mini:cfg.image_aspect_ratio='pad'
-    keep=144 if method.endswith('25') else 288 if method.endswith('50') else 576
+    keep=144 if method=='Random25_L2' else FASTV_KEEP.get(method,144 if method.endswith('25') else 288 if method.endswith('50') else 576)
     loading=dict(config=cfg,torch_dtype=torch.bfloat16,device_map={'':'cuda:0'},low_cpu_mem_usage=True,attn_implementation='eager',local_files_only=True,output_loading_info=True)
     if method.startswith('Agile'):loading['visual_token_num']=keep
     model,loading_info=cls.from_pretrained(model_path,**loading)
@@ -108,7 +109,7 @@ def run(folder,method,out,candidate=None,selector_only=False,resume_only=False,l
     if mini:
         if model.config.resolution_ratio!=1:raise Blocked('Need checkpoint-specific crop audit')
         pixels=pixels.unsqueeze(0)
-    if method.startswith('FastV'):
+    if uses_fastv_runtime(method):
         import functools
         import types
         from .compat import llava_forward_with_cache_position
@@ -116,7 +117,7 @@ def run(folder,method,out,candidate=None,selector_only=False,resume_only=False,l
         start=int((ids[0]==constants.IMAGE_TOKEN_INDEX).nonzero()[0])
         if not hasattr(model.model,'fastv_forward'):raise Blocked('Frozen FastV author forward absent')
         if method!='FastVFull':
-            model.model.forward=functools.partial(model.model.fastv_forward,fastv_config=dict(fastv_k=2,fastv_r=1-keep/576,image_token_start_index=start,image_token_length=576))
+            configure_fastv_control(model,method,start,uid=row['uid'] if candidate else 'synthetic-control-probe',source_lock=folder/'manifests/source_lock.json')
     if candidate:
         if resume_only:
             from .model_resume_probe import run as resume_probe
@@ -149,7 +150,7 @@ def run(folder,method,out,candidate=None,selector_only=False,resume_only=False,l
     for index,shapes in layer_shapes.items():
         expected=expected_full
         if method.startswith(('Agile','VisionZip')):expected=expected_full-576+keep
-        if method.startswith('FastV') and int(index)>=2:expected=expected_full-576+keep
+        if uses_fastv_runtime(method) and int(index)>=2:expected=expected_full-576+keep
         # PriorTR prunes after its 1-based layer 3; record first and assert below.
         if method.startswith('PriorTR') and int(index)>=3:expected=expected_full-576+keep
         if not mini and shapes[0][1]!=expected:raise Blocked('Unexpected layer token budget at '+index)

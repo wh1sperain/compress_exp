@@ -7,13 +7,16 @@ from .common import read,write,digest,Blocked,code_hash
 from .manifest import TASKS
 
 
-def run(folder,model,condition,out):
+def run(folder,model,condition,out,supplemental_audit=None,supplemental_status=None):
     from .native_session import NativeSession
     out=Path(out)
     if out.exists():raise Blocked('Existing diagnostic output')
     out.mkdir(parents=True)
     manifest=Path(folder)/'manifests/frozen-inputs-v1/calibration_manifest.jsonl'
     rows=[json.loads(s) for s in manifest.read_text().splitlines()]
+    if model=='qwen4':
+        from .supplemental_inputs import attach
+        rows,_=attach(rows,supplemental_audit,supplemental_status)
     selected=[min((r for r in rows if r['task']==t),key=lambda r:digest(r['uid'])) for t in TASKS]
     session=NativeSession(folder,model,condition,out/'loading.json')
     records=[]
@@ -21,6 +24,9 @@ def run(folder,model,condition,out):
         for row in selected:
             job={'job_key':'diagnostic-'+model+'-'+condition+'-'+row['uid'],'seed':1234,
                  'generation':dict(max_new_tokens=1,temperature=1.,top_k=20,top_p=.95)}
+            if condition=='Random25_L2':
+                from .control_adapters import random_mask
+                job['config']={'mask_seed':random_mask(row['uid'])['mask_seed']}
             result=session.generate(row,job,out/(digest(row['uid'])+'.prefix.json'))
             records.append(dict(uid=row['uid'],task=row['task'],**result))
             write(out/'status.json',{'stage':'running','completed':len(records),'updated_at':time.time()})
@@ -33,5 +39,6 @@ def run(folder,model,condition,out):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--model',required=True)
-    p.add_argument('--condition',required=True);p.add_argument('--out',required=True);a=p.parse_args()
-    run(a.folder,a.model,a.condition,a.out)
+    p.add_argument('--condition',required=True);p.add_argument('--out',required=True)
+    p.add_argument('--supplemental-audit');p.add_argument('--supplemental-status');a=p.parse_args()
+    run(a.folder,a.model,a.condition,a.out,a.supplemental_audit,a.supplemental_status)

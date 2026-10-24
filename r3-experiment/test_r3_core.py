@@ -263,7 +263,7 @@ class RunnerTests(unittest.TestCase):
         from r3.runner import run_jobs
         job,rows=self.fixture()
         with tempfile.TemporaryDirectory() as d:
-            changed=dict(job,condition='Random25_L2')
+            changed=dict(job,condition='UnregisteredControl')
             with self.assertRaises(Blocked):run_jobs([changed],rows,{},d,lambda *a:self.fail('must not load'))
             class Session:
                 def generate(self,*a):return dict(generated_token_ids=[5],output_tokens=1,output_cap_reached=False,eos_terminated=False)
@@ -309,8 +309,8 @@ class RegistrationTests(unittest.TestCase):
             self.assertIn('llava7/AgilePruner25',groups)
             _,_,controls=compile_plans(spec,manifest,profile,['controls'])
             self.assertEqual(controls['planned_records'],2400)
-            self.assertIn('llava7/Random25_L2',controls['unsupported_conditions'])
-            with self.assertRaises(Blocked):register(folder,spec,manifest,profile,['controls'],'absent','absent',folder/'registration')
+            self.assertEqual(controls['unsupported_conditions'],[])
+            with self.assertRaises((Blocked,FileNotFoundError)):register(folder,spec,manifest,profile,['controls'],'absent','absent',folder/'registration')
             self.assertFalse((folder/'registration').exists())
     def test_missing_and_stale_gate_never_certify(self):
         from r3.common import require_gate,write,code_hash
@@ -320,5 +320,22 @@ class RegistrationTests(unittest.TestCase):
             with self.assertRaises(Blocked):require_gate(p,'s','e')
             write(p,{'passed':False,'spec_sha256':'s','engine_sha256':'e','code_sha256':code_hash()})
             with self.assertRaises(Blocked):require_gate(p,'s','e')
+
+class SupplementalAuditTests(unittest.TestCase):
+    def test_preserves_frozen_input_and_rejects_missing_or_tampered(self):
+        from r3.supplemental_inputs import attach
+        from r3.common import write,digest
+        rows=[{'uid':'u','native_inputs':{'qwen8':{'existing':True}}}]
+        audit={'eligible':True,'expanded_prompt_tokens':10,'processor_sha256':'p','tokenizer_sha256':'t','chat_template_sha256':'c','prompt_sha256':'q'}
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'audit.jsonl';status=Path(d)/'status.json'
+            p.write_text(json.dumps({'uid':'u','model':'qwen4','audit':audit})+'\n')
+            write(status,dict(stage='complete',exit_code=0,completed=1,total=1,audit_sha256=digest(p.read_bytes())))
+            merged,identity=attach(rows,p,status)
+            self.assertNotIn('qwen4',rows[0]['native_inputs'])
+            self.assertEqual(merged[0]['native_inputs']['qwen4'],audit)
+            with self.assertRaises(Blocked):attach([{'uid':'missing','native_inputs':{}}],p,status)
+            p.write_text(p.read_text()+'\n')
+            with self.assertRaises(Blocked):attach(rows,p,status)
 
 if __name__=='__main__':unittest.main()

@@ -14,7 +14,8 @@ def question_text(row,suffix):
     return text+suffix
 
 
-def audit(folder,candidates,out):
+def audit(folder,candidates,out,model_key="qwen8"):
+    if model_key not in ("qwen8","qwen4"):raise Blocked("Unsupported Qwen checkpoint")
     if out.exists():raise Blocked('Input audit output already exists; choose new attempt')
     import torch
     torch.set_num_threads(4)
@@ -22,7 +23,7 @@ def audit(folder,candidates,out):
     from .qwen_smoke import activate
     activate(folder)
     from transformers.models.qwen3_vl.processing_qwen3_vl import Qwen3VLProcessor
-    weights=read(folder/'manifests/model_weights_lock.json')['qwen8']
+    weights=read(folder/'manifests/model_weights_lock.json')[model_key]
     processor=Qwen3VLProcessor.from_pretrained(weights['path'],local_files_only=True,min_pixels=262144,max_pixels=4194304)
     config=processor.image_processor.to_dict()
     if config['size']!={'shortest_edge':262144,'longest_edge':4194304}:raise Blocked('Pixel policy differs')
@@ -56,7 +57,7 @@ def audit(folder,candidates,out):
                     processed_size=[grid[1]*config['patch_size'],grid[2]*config['patch_size']],
                     processor_sha256=processor_sha,tokenizer_sha256=tokenizer_sha,chat_template_sha256=template_sha,
                     prompt_sha256=digest(json.dumps(ids.tolist())),native_context=65536)
-                stream.write(json.dumps({'uid':row['uid'],'model':'qwen8','audit':entry})+'\n')
+                stream.write(json.dumps({'uid':row['uid'],'model':model_key,'audit':entry})+'\n')
                 if (i+1)%20==0:stream.flush();update(completed=i+1)
         update(stage='complete',completed=len(rows),exit_code=0,audit_sha256=digest(out.read_bytes()))
     except BaseException as exc:
@@ -66,4 +67,5 @@ def audit(folder,candidates,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--folder',required=True)
     p.add_argument('--candidates',required=True);p.add_argument('--out',required=True)
-    a=p.parse_args();audit(Path(a.folder),Path(a.candidates),Path(a.out))
+    p.add_argument('--model-key',choices=['qwen8','qwen4'],default='qwen8')
+    a=p.parse_args();audit(Path(a.folder),Path(a.candidates),Path(a.out),a.model_key)
