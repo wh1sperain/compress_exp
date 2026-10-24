@@ -40,7 +40,7 @@ def activate(folder):
     return source
 
 
-def run(folder,method,out,model_key,candidate=None):
+def run(folder,method,out,model_key,candidate=None,selector_only=False):
     if out.exists() or out.with_suffix('.prefix.json').exists():
         raise Blocked('Use a new immutable smoke attempt')
     activate(folder)
@@ -86,6 +86,10 @@ def run(folder,method,out,model_key,candidate=None):
     full_visual=int((batch['input_ids']==model.config.image_token_id).sum())
     if batch['input_ids'].shape[1]>8192:raise Blocked('Prompt exceeds frozen limit')
     if candidate:
+        if selector_only:
+            from .real_selector_probe import run as selector_probe
+            selector_probe(model,batch,folder,'qwen-'+method,out)
+            return
         from .correctness_probe import run as probe
         probe(model,batch,processor.tokenizer,model.model.language_model.layers,out,
             dict(method=model_key+'-'+method,model_revision=lock['revision'],uid=row['uid'],
@@ -118,4 +122,5 @@ if __name__=='__main__':
     p.add_argument('--method',choices=['Full','PriorTR50','PriorTR25'],required=True)
     p.add_argument('--model-key',choices=['qwen8','qwen4'],default='qwen8')
     p.add_argument('--candidate')
-    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.model_key,a.candidate)
+    p.add_argument('--selector-only',action='store_true')
+    a=p.parse_args();run(Path(a.folder),a.method,Path(a.out),a.model_key,a.candidate,a.selector_only)
