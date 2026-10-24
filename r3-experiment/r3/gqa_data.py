@@ -4,7 +4,7 @@ from pathlib import Path
 from .common import read,write,Blocked,digest
 
 
-def acquire(folder):
+def acquire(folder,verified_archives=None):
     import fcntl,requests
     from PIL import Image
     lock=(folder/'gqa-prepare.lock').open('a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
@@ -14,6 +14,23 @@ def acquire(folder):
     def update(**kw):
         state.update(kw,updated_at=time.time());write(folder/'telemetry/gqa_state.json',state);write(attempt,state)
     def download(name):
+        if verified_archives is not None:
+            target=verified_archives/name
+            pinned={'questions1.2.zip':(1498616372,'cffe92775624693799d70c15db631d4373e4d09b44153e1757ccf1d5fb3fc623'),
+                    'images.zip':(21817965542,'02ce5c49c793accd5305356de9c39a50f80a7aaac193b0203de30dbbc65bde62')}
+            size,expected=pinned[name]
+            receipt=read(verified_archives/(name+'.receipt.json'))
+            if not receipt.get('verified') or receipt['sha256']!=expected or receipt['size']!=size:
+                raise Blocked('Mirror receipt differs from pinned source')
+            if target.stat().st_size!=size:raise Blocked('Mirror archive size changed')
+            update(stage='verify_mirror_archive',file=name,transport='ModelScope domestic CDN',
+                   mirror_revision='3853095a8013c9d85ecc7224371b2eccdb041561',official_byte_equivalence='not independently established')
+            h=hashlib.sha256()
+            with target.open('rb') as f:
+                for b in iter(lambda:f.read(8*1024*1024),b''):h.update(b)
+            if h.hexdigest()!=expected:raise Blocked('Mirror archive SHA changed')
+            if not zipfile.is_zipfile(target):raise Blocked('Mirror archive is not ZIP')
+            return target
         url='https://downloads.cs.stanford.edu/nlp/data/gqa/'+name
         target=root/name;receipt=root/(name+'.receipt.json')
         if target.exists():
@@ -56,7 +73,8 @@ def acquire(folder):
                 with Image.open(path) as im:im.convert('RGB').load();size=list(im.size)
                 image_info[identity]=(str(path),digest(payload),size)
                 if i%100==0:update(images_completed=i+1)
-        revision='sha256:'+read(root/'questions1.2.zip.receipt.json')['sha256'];rows=[]
+        receipt_root=verified_archives if verified_archives is not None else root
+        revision='sha256:'+read(receipt_root/'questions1.2.zip.receipt.json')['sha256'];rows=[]
         for uid,q in sorted(data.items()):
             path,sha,size=image_info[str(q['imageId'])]
             rows.append(dict(uid='GQA-balanced-val:'+uid,task='GQA-balanced-val',question=q['question'],answer=q['answer'],
@@ -73,4 +91,5 @@ def acquire(folder):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--folder',required=True)
-    a=p.parse_args();acquire(Path(a.folder))
+    p.add_argument('--verified-archives',help='Pinned ModelScope original ZIP directory; no redownload or repackaging')
+    a=p.parse_args();acquire(Path(a.folder),Path(a.verified_archives) if a.verified_archives else None)
