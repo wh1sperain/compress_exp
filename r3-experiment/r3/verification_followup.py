@@ -6,7 +6,8 @@ from .common import read,write,Blocked
 
 def run(folder):
     with (folder/'correctness.lock').open('a') as lock:
-        fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        write(folder/'telemetry/official_followup_state.json',{'pid':os.getpid(),'stage':'waiting_for_diagnostic_lock','production_started':False,'updated_at':time.time()})
+        fcntl.flock(lock,fcntl.LOCK_EX)
         prior=read(folder/'telemetry/worker_session_state.json')
         if prior['stage']!='complete':raise Blocked('Prior worker checks still active')
         failures={r['name'] for r in prior['results'] if r['exit_code']}
