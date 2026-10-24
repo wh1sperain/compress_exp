@@ -95,3 +95,5 @@
 2026-10-24 用户要求30分钟内完成并删除冗余测试：删除集成协调器中的服务器重复CPU单测，撤回尚未执行的FastV全3072步追加扫测；待执行项仅保留未覆盖门槛，已有成功回执复用，原失败和证据不删除。Mini新release 2b209898ce01080d独立作者恢复及比较均PASS（回执SHA56ed5ba1f2534cee740bf2fbc71a7620e4a22db7ee50595b913febac14a94df2），Qwen三组入口比较PASS；均为单图1025步范围，非全native gate。全量自然认证尚缺两侧worker，不得将相同路径双跑伪装等价。截止UTC07:47:47只据实际完成报告。
 
 2026-10-24 用户进一步授权大幅缩减长程测试，仅保证运行正常：本轮改为同图Qwen Full/PriorTR25 local各4096强制步，检查finite/logits/36层缓存增长，取消32K长程矩阵及作者重复路径；不声称原完整long/backend gate通过。PID36480/release22c15b7d2d480bda已启动。Mini独立恢复已PASS；16份已有自然记录的冻结tokenizer离线分区全PASS，未重新生成。GQA严格exact评分已按冻结作者eval核实；真实prompt IDs与EOS配置现保存到生成记录。
+
+2026-10-24 并行推进：补齐Qwen/Mini/FastV及A其他方法独立作者自然参考worker，仍共享固定作者forward/HF内核，未声称分页引擎实现；共同natural_preparation job_key/种子/原cap不变，记录原prompt与EOS。Qwen Full候选五任务5条及参考5条已完成，自动离线解析评分已通过（10/600，完整自然认证仍INCONCLUSIVE）。Mini参考与评分自动接续；A五方法各任务1题×两侧共50条integration队列PID38514/release7b1bf1f8231574f5按单GPU顺序自动运行，失败保留并继续其他独立条件，不重复旧成功/长测。全阶段仍属集成验证，正式未启动。
