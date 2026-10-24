@@ -41,10 +41,20 @@ def load_plan(plan_path,folder):
         from .supplemental_inputs import attach
         rows,extra=attach(rows,plan['supplemental_audit_path'],plan['supplemental_status_path'])
         identity.update(extra)
-    for name in ('native_gate_path','engine_gate_path'):
-        gate=require_gate(plan[name],spec_sha,profile_sha)
-        gates.append(gate)
-        if any(gate.get(k)!=v for k,v in identity.items()):raise Blocked('Gate input/source lock changed')
+    acceptance=None
+    if plan.get('execution_mode'):
+        from .execution_acceptance import validate,MODE
+        if plan['execution_mode']!=MODE or plan.get('inference_only') is not True:raise Blocked('Unknown execution policy')
+        if 'native_gate_path' in plan or 'engine_gate_path' in plan:raise Blocked('Reduced policy cannot impersonate gate mode')
+        path=Path(plan['execution_acceptance_path'])
+        if digest(path.read_bytes())!=plan.get('execution_acceptance_sha256'):raise Blocked('Execution acceptance changed')
+        acceptance=validate(path,dict(identity,spec_sha256=spec_sha,engine_sha256=profile_sha,code_sha256=code_hash()),
+                            {j['model']+'/'+j['condition'] for j in plan['jobs']})
+    else:
+        for name in ('native_gate_path','engine_gate_path'):
+            gate=require_gate(plan[name],spec_sha,profile_sha)
+            gates.append(gate)
+            if any(gate.get(k)!=v for k,v in identity.items()):raise Blocked('Gate input/source lock changed')
     if plan.get('spec_sha256')!=spec_sha or plan.get('engine_sha256')!=profile_sha:
         raise Blocked('Plan spec/profile changed')
     if plan.get('code_sha256')!=code_hash():raise Blocked('Plan code changed')
@@ -65,7 +75,10 @@ def load_plan(plan_path,folder):
         scope=job['model']+'/'+job['condition'].removesuffix('_T0p6')
         if any(scope not in gate.get('certified_conditions',[]) for gate in gates):
             raise Blocked('Condition outside gate certification scope')
-    return plan,by_uid,dict(identity,spec_sha256=spec_sha,engine_sha256=profile_sha,code_sha256=code_hash())
+    execution_identity=dict(identity,spec_sha256=spec_sha,engine_sha256=profile_sha,code_sha256=code_hash())
+    if acceptance:execution_identity.update(execution_mode=acceptance['mode'],inference_only=True,
+        full_native_engine_certification=False,execution_acceptance_sha256=plan['execution_acceptance_sha256'])
+    return plan,by_uid,execution_identity
 
 
 def supported(job):
@@ -111,7 +124,8 @@ def run_jobs(jobs,rows,identity,out,session_factory):
             if generated['output_cap_reached']!=(count==cap):raise Blocked('Incorrect cap flag')
             if not generated['eos_terminated'] and count!=cap:raise Blocked('Unexpected early termination')
             result=dict(job,**generated,record_complete=True,binding_sha256=canonical(binding),
-                        completed_at=time.time(),scoring_status='pending_separate_label_process')
+                        completed_at=time.time(),scoring_status='disabled_by_user' if identity.get('inference_only') else 'pending_separate_label_process')
+            if identity.get('execution_mode'):result.update(execution_mode=identity['execution_mode'],full_native_engine_certification=False)
             publish_once(result_path,result)
             completed+=1
         except BaseException as exc:

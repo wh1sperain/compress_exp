@@ -97,3 +97,8 @@
 2026-10-24 用户进一步授权大幅缩减长程测试，仅保证运行正常：本轮改为同图Qwen Full/PriorTR25 local各4096强制步，检查finite/logits/36层缓存增长，取消32K长程矩阵及作者重复路径；不声称原完整long/backend gate通过。PID36480/release22c15b7d2d480bda已启动。Mini独立恢复已PASS；16份已有自然记录的冻结tokenizer离线分区全PASS，未重新生成。GQA严格exact评分已按冻结作者eval核实；真实prompt IDs与EOS配置现保存到生成记录。
 
 2026-10-24 并行推进：补齐Qwen/Mini/FastV及A其他方法独立作者自然参考worker，仍共享固定作者forward/HF内核，未声称分页引擎实现；共同natural_preparation job_key/种子/原cap不变，记录原prompt与EOS。Qwen Full候选五任务5条及参考5条已完成，自动离线解析评分已通过（10/600，完整自然认证仍INCONCLUSIVE）。Mini参考与评分自动接续；A五方法各任务1题×两侧共50条integration队列PID38514/release7b1bf1f8231574f5按单GPU顺序自动运行，失败保留并继续其他独立条件，不重复旧成功/长测。全阶段仍属集成验证，正式未启动。
+
+2026-10-24 15:47截止复核：当前集成队列全部输出到齐，Qwen Full 10、Mini参考1、A五条件各10，共61条解析评分通过。Qwen Full及A Full/PriorTR25/AgilePruner25/VisionZip25五对原token完全相同；FastV25为4/5对相同，余1对长度均20，不能称严格token等价。规模不足完整自然认证，所有统计仍INCONCLUSIVE。发现LLaVA Full五题4题缺FINAL ANSWER标记，其中InfoVQA一题整段答案影子评分1而V3主评分0；仅诊断，不改提示/主评分，不将格式失败等同于内容错误。原始记录均保留。正式研究仍未启动。
+
+## 2026-10-24 正式推理启动政策
+用户明确要求准备正式实验，禁用答案解析和评分，结束后下载全部结果。注册主实验19500+对照2400=21900唯一任务，M60人工阶段单独暂缓。采用显式user_reduced_native_b1许可并保留原完整认证未建立事实；旧严格gate路径不伪造通过。新增唯一流水线、GPU记录、完整结果导出与本地SHA核验。实际启动以formal_inference_launch回执为准。

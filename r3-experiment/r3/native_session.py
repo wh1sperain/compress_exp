@@ -5,6 +5,7 @@ No labels, altered stop rules, or research retries are introduced here.
 import functools
 import importlib
 import json
+import io
 import types
 from pathlib import Path
 from .common import read, digest, Blocked
@@ -12,20 +13,38 @@ from .control_adapters import uses_fastv_runtime,configure_fastv_control
 
 
 def processor_hash_for_audit(config,expected):
-    raw=digest(json.dumps(config,sort_keys=True))
-    if raw==expected:return raw,raw
-    # Frozen FastV's HF version serializes this API-validation list; HF4.37
-    # does not. It does not participate in image transforms. Nothing else is
-    # normalized, and the remaining whole dictionary must match the audit.
-    known=['images','do_resize','size','resample','do_center_crop','crop_size',
+    return ProcessorFingerprint(config).match(expected)
+
+
+class ProcessorFingerprint:
+    """Compute immutable image-processor fingerprints once per session."""
+    def __init__(self,config):
+        self.raw=digest(json.dumps(config,sort_keys=True))
+        self.normalized=None
+        # Frozen FastV's HF version serializes this API-validation list; HF4.37
+        # does not. It does not participate in image transforms. Nothing else is
+        # normalized, and the remaining whole dictionary must match the audit.
+        known=['images','do_resize','size','resample','do_center_crop','crop_size',
            'do_rescale','rescale_factor','do_normalize','image_mean','image_std',
            'do_convert_rgb','return_tensors','data_format','input_data_format']
-    canonical=dict(config)
-    if canonical.get('_valid_processor_keys')!=known:raise Blocked('Processor configuration changed')
-    canonical.pop('_valid_processor_keys')
-    normalized=digest(json.dumps(canonical,sort_keys=True))
-    if normalized!=expected:raise Blocked('Processor transforms changed')
-    return raw,normalized
+        canonical=dict(config)
+        if canonical.get('_valid_processor_keys')==known:
+            canonical.pop('_valid_processor_keys')
+            self.normalized=digest(json.dumps(canonical,sort_keys=True))
+
+    def match(self,expected):
+        if self.raw==expected:return self.raw,self.raw
+        if self.normalized is None:raise Blocked('Processor configuration changed')
+        if self.normalized!=expected:raise Blocked('Processor transforms changed')
+        return self.raw,self.normalized
+
+
+class SessionInputFingerprints:
+    """Tokenizer/processor objects are fixed after the native loader finishes."""
+    def __init__(self,tokenizer,image_processor,qwen=False,chat_template=None):
+        self.processor=ProcessorFingerprint(image_processor.to_dict())
+        self.tokenizer_sha256=digest(tokenizer.backend_tokenizer.to_str()) if qwen else digest(json.dumps(tokenizer.get_vocab(),sort_keys=True))
+        self.chat_template_sha256=digest(chat_template) if qwen else None
 
 
 class NativeSession:
@@ -44,14 +63,18 @@ class NativeSession:
             if uses_fastv_runtime(self.condition):
                 from .compat import llava_forward_with_cache_position
                 self.model.forward=types.MethodType(llava_forward_with_cache_position,self.model)
+        self.input_fingerprints=SessionInputFingerprints(self.tokenizer,
+            self.processor.image_processor if model_key.startswith('qwen') else self.vision.image_processor,
+            qwen=model_key.startswith('qwen'),chat_template=self.processor.chat_template if model_key.startswith('qwen') else None)
 
     def prepare(self,row):
         import torch
         from PIL import Image
         from .audit_qwen_inputs import question_text
-        if digest(Path(row['image_path']).read_bytes())!=row['image_sha256']:
+        image_bytes=Path(row['image_path']).read_bytes()
+        if digest(image_bytes)!=row['image_sha256']:
             raise Blocked('Input image changed')
-        with Image.open(row['image_path']) as image:im=image.convert('RGB')
+        with Image.open(io.BytesIO(image_bytes)) as image:im=image.convert('RGB')
         text=question_text(row,self.spec['prompt']['suffix'])
         audit=row['native_inputs'].get(self.key)
         if not audit or not audit['eligible']:raise Blocked('Missing eligible native input audit')
@@ -61,9 +84,9 @@ class NativeSession:
             prompt=p.apply_chat_template(messages,tokenize=False,add_generation_prompt=True)
             batch=p(text=[prompt],images=[im],return_tensors='pt')
             ids=batch['input_ids'][0]
-            processor_raw,processor_sha=processor_hash_for_audit(p.image_processor.to_dict(),audit['processor_sha256'])
-            tokenizer_sha=digest(self.tokenizer.backend_tokenizer.to_str())
-            if digest(p.chat_template)!=audit['chat_template_sha256']:raise Blocked('Chat template changed')
+            processor_raw,processor_sha=self.input_fingerprints.processor.match(audit['processor_sha256'])
+            tokenizer_sha=self.input_fingerprints.tokenizer_sha256
+            if self.input_fingerprints.chat_template_sha256!=audit['chat_template_sha256']:raise Blocked('Chat template changed')
             visual=int((ids==self.model.config.image_token_id).sum())
             expanded=len(ids)
             inputs={k:v.to(self.model.device) for k,v in batch.items()}
@@ -84,8 +107,8 @@ class NativeSession:
             if self.key=='mini8':pixels=pixels.unsqueeze(0)
             visual=1 if self.key=='mini8' else 576
             expanded=len(ids)-1+visual
-            processor_raw,processor_sha=processor_hash_for_audit(self.vision.image_processor.to_dict(),audit['processor_sha256'])
-            tokenizer_sha=digest(json.dumps(self.tokenizer.get_vocab(),sort_keys=True))
+            processor_raw,processor_sha=self.input_fingerprints.processor.match(audit['processor_sha256'])
+            tokenizer_sha=self.input_fingerprints.tokenizer_sha256
             inputs={'inputs':ids.unsqueeze(0).to(self.model.device),'images':pixels}
             if uses_fastv_runtime(self.condition):
                 control=configure_fastv_control(self.model,self.condition,
