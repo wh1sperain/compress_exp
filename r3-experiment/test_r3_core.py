@@ -18,6 +18,10 @@ from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_official_git_blob_integrity(self):
+        from r3.chartqa_data import verify_blob
+        verify_blob(b'hello\n','ce013625030ba8dba906f756967f9e9ca394464a')
+        with self.assertRaises(Blocked):verify_blob(b'changed','ce013625030ba8dba906f756967f9e9ca394464a')
     def test_manifest_freeze_is_complete_label_isolated_and_immutable(self):
         from r3.manifest import freeze
         rows=[]
