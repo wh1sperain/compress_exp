@@ -102,3 +102,9 @@
 
 ## 2026-10-24 正式推理启动政策
 用户明确要求准备正式实验，禁用答案解析和评分，结束后下载全部结果。注册主实验19500+对照2400=21900唯一任务，M60人工阶段单独暂缓。采用显式user_reduced_native_b1许可并保留原完整认证未建立事实；旧严格gate路径不伪造通过。新增唯一流水线、GPU记录、完整结果导出与本地SHA核验。实际启动以formal_inference_launch回执为准。
+
+## 2026-10-24 真实批处理执行更新
+按用户强调GPU_EXECUTION_R3后未启动B1正式任务。已实现单模型常驻、原生prefill、逐层独立KV的真实批解码和连续补槽。六个代表条件及Agile/VisionZip/Qwen4补充短数值检查PASS，Qwen4路满cap保守预算INFEASIBLE（未分配、未OOM），独立新release改Qwen3路，其他4路，不改研究输出上限。三family满cap资源检查及LLaVA/Mini五题EOS补槽已PASS，Qwen原cap五题补槽运行中；全部通过后自动21900正式启动，不做答案解析评分。当前release340eebd2e4c82bbd，GitHub214b53e070d6c30c9096713ec816a1c71398061b。
+
+## 2026-10-24 16:38 正式推理已启动
+Qwen原cap五题自然EOS/补槽检查PASS，累计1693生成token，无触顶，峰值3路。正式run r3-20261024-batch-inference-v1于16:37:46启动，release340eebd2e4c82bbd，lifecycle42345/coordinator42346；首次回执核对115个真实result文件，当前llava7-Full。总21900，LLaVA/Mini4路、Qwen3路，单份常驻权重及连续补槽。答案解析和评分关闭，原完整native/engine认证仍未建立，采用user_reduced_native_batch并如实保留范围。15分钟定时监督，结束自动导出全部原始结果，本机归档与逐文件SHA验收；M60人工阶段另行暂缓。

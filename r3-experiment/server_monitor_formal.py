@@ -9,6 +9,8 @@ for name in ('lifecycle.json','status.json','completion.json','lifecycle_complet
     if path.exists():result['receipts'][name]=json.loads(path.read_text())
 for path in sorted(out.glob('*/status.json')):
     state=json.loads(path.read_text());state['result_files']=len(list(path.parent.glob('*/result.json')))
+    batch=path.parent/'batch_status.json'
+    if batch.exists():state['batch']=json.loads(batch.read_text())
     key=state.get('job_key');prefix=path.parent/str(key)/'prefix.json'
     if key and prefix.exists():
         r=json.loads(prefix.read_text());state['active_generated_steps']=r['generated_steps'];state['prefix_updated_at']=r.get('updated_at')
