@@ -54,6 +54,10 @@ def run(folder,method,out):
             cls=importlib.import_module('llava.vtr.model.priortr_llava').PriorTRLlava
     cfg=cfgcls.from_pretrained(model_path,local_files_only=True)
     cfg.mm_vision_tower=clip
+    # Mini's checkpoint includes its vision tower. Materialize the author's
+    # module before HF dispatch so those tensors are loaded, never discarded.
+    # This author constructor flag controls eager loading; inference is frozen.
+    if mini:cfg.unfreeze_mm_vision_tower=True
     if not mini:cfg.image_aspect_ratio='pad'
     keep=144 if method.endswith('25') else 288 if method.endswith('50') else 576
     loading=dict(config=cfg,torch_dtype=torch.bfloat16,device_map={'':'cuda:0'},low_cpu_mem_usage=True,attn_implementation='eager',local_files_only=True,output_loading_info=True)
@@ -63,6 +67,7 @@ def run(folder,method,out):
         write(out.with_suffix('.loading-failure.json'),loading_info)
         raise Blocked('Checkpoint tensor loading did not match; see loading-failure receipt')
     model.eval()
+    model.requires_grad_(False)
     vision=model.get_vision_tower()
     if not vision.is_loaded:vision.load_model(device_map='cuda:0')
     model.to(dtype=torch.bfloat16,device='cuda:0')
@@ -125,7 +130,9 @@ def run(folder,method,out):
                'synthetic_only':True,'wall_seconds':time.time()-started,'layer_hidden_shapes':layer_shapes,
                'prompt_ids':ids.cpu().tolist(),'prompt_sha256':digest(prompt),'result':result,
                'model_revision':lock[key]['revision'],'clip_revision':lock['clip336']['revision'],
-               'weight_dtype':str(next(model.parameters()).dtype),'loading_info':loading_info})
+               'weight_dtype':str(next(model.parameters()).dtype),'loading_info':loading_info,
+               'trainable_parameters':sum(p.numel() for p in model.parameters() if p.requires_grad),
+               'vision_loading_policy':'checkpoint_eager' if mini else 'external_frozen_clip'})
 
 
 def main():
