@@ -57,6 +57,12 @@ def freeze(candidates,out):
             limit=2048 if model=='llava7' else 8192 if model=='qwen8' else audit.get('native_context',0)-2048
             if audit['expanded_prompt_tokens']>limit:raise Blocked('Eligible audit exceeds context')
             if model=='llava7' and audit['visual_tokens']!=576:raise Blocked('Wrong A full visual count')
+            if model=='mini8':
+                lengths=audit.get('prefusion_lengths',{})
+                if set(lengths)!={'0','1','2','3'} or audit['visual_tokens']!=1 or not audit.get('model_revision'):
+                    raise Blocked('Mini native compressor/prefusion evidence missing')
+                if any(not isinstance(n,int) or n<=0 or n>audit['native_context'] for n in lengths.values()):
+                    raise Blocked('Mini prefusion exceeds native context')
     main,cal,excluded=select(candidates)
     all_rows=main+cal
     _,labels=split_labels(all_rows)
@@ -64,7 +70,7 @@ def freeze(candidates,out):
     hashes={}
     for name,rows in [('main_manifest.jsonl',main),('calibration_manifest.jsonl',cal)]:
         safe=[]
-        audit_fields={'eligible','processor_sha256','tokenizer_sha256','chat_template_sha256','prompt_sha256','expanded_prompt_tokens','visual_tokens','processed_size','native_context'}
+        audit_fields={'eligible','processor_sha256','tokenizer_sha256','chat_template_sha256','prompt_sha256','expanded_prompt_tokens','visual_tokens','processed_size','native_context','prefusion_lengths','model_revision'}
         for r in rows:
             worker={k:r[k] for k in sorted(fields) if k in r}
             worker['native_inputs']={m:{k:v for k,v in a.items() if k in audit_fields} for m,a in r['native_inputs'].items()}

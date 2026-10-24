@@ -63,14 +63,36 @@ class CoreTests(unittest.TestCase):
                     question='question',answers=['SECRET'],rationale='SECRET',source_revision='fixed',
                     single_image=True,rgb_decodable=True,public_label=True,
                     native_inputs={m:dict(audit) for m in ['llava7','qwen8','mini8']}))
+                rows[-1]['native_inputs']['mini8'].update(visual_tokens=1,prefusion_lengths={str(j):1277 for j in range(4)},model_revision='fixed-mini')
         with tempfile.TemporaryDirectory() as d:
             out=Path(d)/'frozen';freeze(rows,out)
             self.assertEqual(len((out/'main_manifest.jsonl').read_text().splitlines()),500)
             self.assertEqual(len((out/'calibration_manifest.jsonl').read_text().splitlines()),100)
             self.assertNotIn('SECRET',(out/'main_manifest.jsonl').read_text())
             self.assertIn('SECRET',(out/'scoring_labels.json').read_text())
+            mini=json.loads((out/'main_manifest.jsonl').read_text().splitlines()[0])['native_inputs']['mini8']
+            self.assertEqual(mini['prefusion_lengths'],{str(j):1277 for j in range(4)})
             with self.assertRaises(Blocked):freeze(rows,out)
             with self.assertRaises(Blocked):select(rows+[rows[0]])
+            rows[0]['native_inputs']['mini8']['prefusion_lengths']['0']=5000
+            with self.assertRaises(Blocked):freeze(rows,Path(d)/'bad-prefusion')
+    def test_audit_join_rejects_partial_duplicates_and_corruption(self):
+        from r3.freeze_audited_inputs import assemble
+        from r3.common import write,digest
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);source=root/'candidates.jsonl';source.write_text(json.dumps({'uid':'u'})+'\n')
+            paths=[]
+            for model in ['llava7','qwen8','mini8']:
+                path=root/(model+'.jsonl');path.write_text(json.dumps({'uid':'u','model':model,'audit':{'eligible':True}})+'\n')
+                write(path.with_suffix('.status.json'),dict(stage='complete',exit_code=0,total=1,completed=1,audit_sha256=digest(path.read_bytes())))
+                paths.append(path)
+            rows,receipt=assemble([source],paths);self.assertEqual(receipt['audit_count'],3)
+            with self.assertRaises(Blocked):assemble([source],paths[:2])
+            with self.assertRaises(Blocked):assemble([source],paths+[paths[0]])
+            write(paths[0].with_suffix('.status.json'),dict(stage='audit',exit_code=0))
+            with self.assertRaises(Blocked):assemble([source],paths)
+            paths[1].write_text('changed')
+            with self.assertRaises(Blocked):assemble([source],paths[1:])
     def test_hf5_loading_receipt_preserves_failures(self):
         from r3.qwen_smoke import loading_receipt
         info={'missing_keys':{'b','a'},'unexpected_keys':set(),'mismatched_keys':{'x':((2,),(3,))}}
