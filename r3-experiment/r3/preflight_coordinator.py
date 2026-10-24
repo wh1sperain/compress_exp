@@ -23,14 +23,15 @@ def main():
     attempt.mkdir(parents=True);state['attempt_directory']=str(attempt)
     write(status,state)
     try:
-        subprocess.run([sys.executable,'-m','r3.environments','--folder',str(folder)],check=True)
-        environments=read(folder/'environment/native_environments.json')
-        registered=['Full','PriorTR50','PriorTR25','AgilePruner50','AgilePruner25','VisionZip50','VisionZip25','FastVFull','FastV50','FastV25','MiniNative']
+        registered=['Full','PriorTR50','PriorTR25','AgilePruner50','AgilePruner25','VisionZip50','VisionZip25','FastVFull','FastV50','FastV25','MiniNative','QwenFull','QwenPriorTR50','QwenPriorTR25']
         methods=a.methods or registered
         if not methods or any(m not in registered for m in methods):raise Blocked('Unregistered smoke method')
+        tracks=sorted({'qwen' if m.startswith('Qwen') else 'mini' if m=='MiniNative' else 'fastv' if m.startswith('FastV') else 'llava' for m in methods})
+        subprocess.run([sys.executable,'-m','r3.environments','--folder',str(folder),'--tracks',*tracks],check=True)
+        environments=read(folder/'environment/native_environments.json')
         state['requested_methods']=methods
         for method in methods:
-            required={'mini8' if method=='MiniNative' else 'llava7','clip336'}
+            required={'qwen8'} if method.startswith('Qwen') else {'mini8' if method=='MiniNative' else 'llava7','clip336'}
             while True:
                 state.update(stage='waiting_for_verified_weights',method=method,required=sorted(required),updated_at=time.time());write(status,state)
                 weights=folder/'manifests/model_weights_lock.json'
@@ -39,8 +40,10 @@ def main():
                 if bootstrap['stage']=='failed':raise Blocked('Required artifacts unavailable after preparation failure; original receipt retained')
                 time.sleep(30)
             state.update(stage='native_synthetic_smoke',method=method,updated_at=time.time());write(status,state)
-            env='mini' if method=='MiniNative' else 'fastv' if method.startswith('FastV') else 'llava'
-            subprocess.run([environments[env]['python'],'-m','r3.native_smoke','--folder',str(folder),'--method',method,'--out',str(attempt/('smoke-'+method+'.json'))],check=True)
+            env='qwen' if method.startswith('Qwen') else 'mini' if method=='MiniNative' else 'fastv' if method.startswith('FastV') else 'llava'
+            module='r3.qwen_smoke' if env=='qwen' else 'r3.native_smoke'
+            native_method=method.removeprefix('Qwen') if env=='qwen' else method
+            subprocess.run([environments[env]['python'],'-m',module,'--folder',str(folder),'--method',native_method,'--out',str(attempt/('smoke-'+method+'.json'))],check=True)
         state.update(stage='smoke_complete_not_certified',exit_code=0,updated_at=time.time())
         write(status,state);write(folder/'reports/preflight_completion.json',state)
     except BaseException as exc:
