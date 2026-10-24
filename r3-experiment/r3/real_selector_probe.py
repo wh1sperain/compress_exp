@@ -9,6 +9,15 @@ from .common import write,Blocked
 from .native_sources import AuthorSources
 
 
+def observe_forward(forward, observer):
+    """Observe even explicit .forward() calls that bypass nn.Module hooks."""
+    def wrapped(*args, **kwargs):
+        output=forward(*args, **kwargs)
+        observer(args, output)
+        return output
+    return wrapped
+
+
 def run(model,inputs,folder,method,out):
     import torch
     out=Path(out)
@@ -77,7 +86,7 @@ def run(model,inputs,folder,method,out):
                 aggregated=actual.cpu(),dominant_indices=indices.cpu())
             captured['expected_projection']=model.model.mm_projector(reference)
             checks.append({'component':'VisionZip aggregation','exact_author_replay':True,'kept':keep,'cls_retained':True})
-        handles.append(vision.register_forward_hook(vision_hook))
+        replace(vision,'forward',observe_forward(vision.forward,lambda args,output:vision_hook(vision,args,output)))
         def projector_hook(module,args,output):
             if 'expected_projection' not in captured:return
             if not torch.equal(output,captured['expected_projection']):raise Blocked('Projected merged features differ')

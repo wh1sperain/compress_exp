@@ -4,7 +4,7 @@ from pathlib import Path
 from .common import read,write,digest
 
 
-def run(folder,selectors_only=False):
+def run(folder,selectors_only=False,methods=None):
     lock=(folder/'correctness.lock').open('a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
     attempt=folder/'tests'/(('real-selectors-' if selectors_only else 'core-correctness-')+str(time.time_ns()));attempt.mkdir()
     candidates=[json.loads(s) for s in (folder/'data/existing-pools-v1/candidates_unvalidated.jsonl').read_text().splitlines()]
@@ -17,6 +17,10 @@ def run(folder,selectors_only=False):
           ('llava','VisionZip50'),('llava','VisionZip25'),('mini','MiniNative'),
           ('qwen','Full'),('qwen','PriorTR50'),('qwen','PriorTR25')]
     if selectors_only:jobs=[(e,m) for e,m in jobs if m.startswith(('PriorTR','Agile','VisionZip')) and not m.endswith('Full')]
+    if methods:
+        if not selectors_only:raise ValueError('Method filtering restricted to selector diagnostics')
+        if not set(methods)<={m for e,m in jobs}:raise ValueError('Unregistered diagnostic methods')
+        jobs=[(e,m) for e,m in jobs if m in methods]
     state={'pid':os.getpid(),'attempt':str(attempt),'production_started':False,'results':[]}
     def update(**kw):state.update(kw,updated_at=time.time());write(folder/('telemetry/real_selectors_state.json' if selectors_only else 'telemetry/correctness_state.json'),state)
     update(stage='running')
@@ -38,4 +42,5 @@ def run(folder,selectors_only=False):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--selectors-only',action='store_true')
-    a=p.parse_args();run(Path(a.folder),a.selectors_only)
+    p.add_argument('--methods',nargs='+')
+    a=p.parse_args();run(Path(a.folder),a.selectors_only,a.methods)

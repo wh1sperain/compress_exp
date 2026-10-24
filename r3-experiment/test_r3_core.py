@@ -142,6 +142,17 @@ class CoreTests(unittest.TestCase):
         for value in ('','0','0.25'):
             with patch.dict('os.environ',{'DIST_THRESHOLD':value},clear=True):
                 with self.assertRaises(Blocked):require_adaptive_agile()
+    def test_observer_handles_direct_forward_and_preserves_output(self):
+        from r3.real_selector_probe import observe_forward
+        output=object();seen=[]
+        class Tower:
+            def forward(self,images):return output
+            def __call__(self,images):return self.forward(images)
+        tower=Tower();tower.forward=observe_forward(tower.forward,lambda args,result:seen.append((args,result)))
+        self.assertIs(tower.forward('direct'),output)
+        self.assertIs(tower('module'),output)
+        self.assertEqual([x[0] for x in seen],[('direct',),('module',)])
+        self.assertTrue(all(x[1] is output for x in seen))
     def test_visionzip_public_budget(self):
         for k,d,c in [(288,243,45),(144,122,22)]:
             self.assertEqual(visionzip_arguments(k),dict(dominant=d,contextual=c))
