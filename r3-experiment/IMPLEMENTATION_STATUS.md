@@ -66,3 +66,5 @@
 2026-10-24 10:37：有界检查无新模型失败。新增ChartQA官方vis-nlp/ChartQA test_human获取器：冻结commit/tree，逐Git blob验证JSON和全部human-test涉及的原图，生成未审计候选而不提前选100/20；单进程锁、进度及独立失败回执。不下载train/augmented，不替换为社区数据。GQA官方页面当前访问超时，尚未获取。21项CPU测试通过；真实native输入审计仍待执行。
 
 2026-10-24 10:52：ChartQA raw官方地址TLS超时，原失败与锁保留；有界网络诊断确认加速环境下相同地址200，直连超时。显式恢复原固定来源。GQA官网页面503但Stanford官方questions1.2.zip返回200（1498616372字节）；新增官方问题/图像ZIP后台准备，文件SHA与ZIP CRC校验，只解出balanced-val引用图像，保留原压缩包，不预抽样；盘空间门槛32GiB。21项CPU和语法检查通过；数据获取不是输入验收或正式研究。
+
+2026-10-24 11:07：ChartQA官方源1250题/625图完成（固定044eabfc306abfe9340c5741f0093aefc5973d06），GQA仍正常下载问题包。目标Qwen处理器实测size shortest_edge262144/longest_edge4194304、patch16/merge2。新增CPU原生输入审计：图像哈希核对、实际processor展开prompt、grid/token数一致性、8192门槛、处理器/tokenizer/template/prompt来源哈希、无答案审计输出；不生成答案，不预抽样。22项CPU测试通过。A/C输入审计与正式runner、长轨迹门槛仍未完成。

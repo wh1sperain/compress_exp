@@ -64,7 +64,7 @@ def freeze(candidates,out):
     hashes={}
     for name,rows in [('main_manifest.jsonl',main),('calibration_manifest.jsonl',cal)]:
         safe=[]
-        audit_fields={'eligible','processor_sha256','prompt_sha256','expanded_prompt_tokens','visual_tokens','processed_size','native_context'}
+        audit_fields={'eligible','processor_sha256','tokenizer_sha256','chat_template_sha256','prompt_sha256','expanded_prompt_tokens','visual_tokens','processed_size','native_context'}
         for r in rows:
             worker={k:r[k] for k in sorted(fields) if k in r}
             worker['native_inputs']={m:{k:v for k,v in a.items() if k in audit_fields} for m,a in r['native_inputs'].items()}

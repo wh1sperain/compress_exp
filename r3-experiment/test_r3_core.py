@@ -18,6 +18,12 @@ from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_input_prompt_excludes_labels_and_preserves_options(self):
+        from r3.audit_qwen_inputs import question_text
+        text=question_text({'question':'Which?','options':['red','blue'],'answer':'SECRET'},'\nSUFFIX')
+        self.assertIn('(A) red\n(B) blue',text)
+        self.assertNotIn('SECRET',text)
+        self.assertTrue(text.endswith('\nSUFFIX'))
     def test_official_git_blob_integrity(self):
         from r3.chartqa_data import verify_blob
         verify_blob(b'hello\n','ce013625030ba8dba906f756967f9e9ca394464a')
