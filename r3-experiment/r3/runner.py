@@ -64,7 +64,7 @@ def load_plan(plan_path,folder):
 
 def supported(job):
     condition=job['condition'].removesuffix('_T0p6')
-    allowed={'llava7':{'Full','FastV50','FastV25','PriorTR50','PriorTR25','Agile50','Agile25','VisionZip50','VisionZip25'},
+    allowed={'llava7':{'Full','FastV50','FastV25','PriorTR50','PriorTR25','AgilePruner50','AgilePruner25','VisionZip50','VisionZip25'},
              'qwen8':{'Full','PriorTR50','PriorTR25'},'mini8':{'MiniNative'}}
     return condition in allowed.get(job['model'],set()) and job['stage'] in ('main','controls')
 

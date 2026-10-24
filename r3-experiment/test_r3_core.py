@@ -295,4 +295,30 @@ class ProcessorHashTests(unittest.TestCase):
         with self.assertRaises(Blocked):processor_hash_for_audit(dict(extended,size=224),expected)
         with self.assertRaises(Blocked):processor_hash_for_audit(dict(extended,_valid_processor_keys=['anything']),expected)
 
+class RegistrationTests(unittest.TestCase):
+    def test_whole_stage_counts_and_control_gaps(self):
+        from r3.register_run import compile_plans,register
+        spec=Path('round3_spec.json').resolve()
+        rows=[dict(uid=t+str(i),task=t,image_sha256=t+str(i)) for t in TASKS for i in range(100)]
+        with tempfile.TemporaryDirectory() as d:
+            folder=Path(d);manifest=folder/'manifest.jsonl';profile=folder/'profile.json'
+            manifest.write_text(''.join(json.dumps(r)+'\n' for r in rows));profile.write_text('{}')
+            base,groups,inventory=compile_plans(spec,manifest,profile,['main'])
+            self.assertEqual(inventory['planned_records'],19500)
+            self.assertEqual(len(groups),13);self.assertEqual(inventory['unsupported_conditions'],[])
+            self.assertIn('llava7/AgilePruner25',groups)
+            _,_,controls=compile_plans(spec,manifest,profile,['controls'])
+            self.assertEqual(controls['planned_records'],2400)
+            self.assertIn('llava7/Random25_L2',controls['unsupported_conditions'])
+            with self.assertRaises(Blocked):register(folder,spec,manifest,profile,['controls'],'absent','absent',folder/'registration')
+            self.assertFalse((folder/'registration').exists())
+    def test_missing_and_stale_gate_never_certify(self):
+        from r3.common import require_gate,write,code_hash
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'gate.json'
+            write(p,{'passed':True,'spec_sha256':'s','engine_sha256':'e','code_sha256':'old'})
+            with self.assertRaises(Blocked):require_gate(p,'s','e')
+            write(p,{'passed':False,'spec_sha256':'s','engine_sha256':'e','code_sha256':code_hash()})
+            with self.assertRaises(Blocked):require_gate(p,'s','e')
+
 if __name__=='__main__':unittest.main()
