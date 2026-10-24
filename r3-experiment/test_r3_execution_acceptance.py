@@ -55,5 +55,61 @@ class ExecutionAcceptance(unittest.TestCase):
             value=read(acceptance);value['passed']=True;acceptance.write_text(json.dumps(value))
             with self.assertRaises(Blocked):register(root,spec,manifest,profile,['main','controls'],None,None,root/'fake',audit,status,acceptance)
 
+    def batch_profile(self,root,profile):
+        from r3.execution_acceptance import BATCH_FILES
+        code_root=Path(__file__).resolve().parent
+        hashes={name:digest((code_root/name).read_bytes()) for name in BATCH_FILES}
+        probes=[]
+        for model in ('llava7','qwen8','mini8'):
+            path=root/(model+'-mock-probe.json')
+            path.write_text(json.dumps(dict(status='PASS',model=model,backend_impl_sha256=hashes,test_fixture=True)))
+            probes.append(dict(path=str(path),sha256=digest(path.read_bytes())))
+        value=dict(backend='native-padded-batch',memory_admission='full_remaining_cap_with_scratch',kv_scratch_factor=3,
+                   max_live_requests=4,dtype='bfloat16',kv_dtype='bfloat16',backend_impl_sha256=hashes,batch_probe_receipts=probes)
+        profile.write_text(json.dumps(value));return value
+
+    def test_batch_registration_and_receipt_tamper(self):
+        from r3.execution_acceptance import MODE_BATCH
+        with tempfile.TemporaryDirectory() as directory:
+            root,spec,manifest,profile,audit,status,evidence,old=self.fixture(directory)
+            value=self.batch_profile(root,profile);acceptance=root/'batch-acceptance.json'
+            create(root,spec,manifest,profile,audit,status,[evidence],'TEST batch authorization',['Full certification incomplete'],acceptance)
+            receipt=register(root,spec,manifest,profile,['main','controls'],None,None,root/'batch-plans',audit,status,acceptance)
+            self.assertEqual(receipt['execution_mode'],MODE_BATCH);self.assertFalse(receipt['gates_verified'])
+            plan,rows,identity=load_plan(receipt['plans'][0]['path'],root)
+            self.assertEqual(plan['backend'],'native-padded-batch');self.assertEqual(identity['execution_mode'],MODE_BATCH)
+            Path(value['batch_probe_receipts'][0]['path']).write_text('{"status":"FAIL"}')
+            with self.assertRaises(Blocked):load_plan(receipt['plans'][0]['path'],root)
+
+    def test_batch_profile_hash_budget_and_failed_probe_rejected(self):
+        from r3.execution_acceptance import validate_batch_profile
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);profile=root/'profile.json';value=self.batch_profile(root,profile)
+            validate_batch_profile(value)
+            value['kv_scratch_factor']=2
+            with self.assertRaises(Blocked):validate_batch_profile(value)
+            value['kv_scratch_factor']=3;value['backend_impl_sha256']['r3/batch_scheduler.py']='stale'
+            with self.assertRaises(Blocked):validate_batch_profile(value)
+            value=self.batch_profile(root,profile)
+            item=value['batch_probe_receipts'][0];path=Path(item['path']);probe=read(path);probe['status']='FAIL'
+            path.write_text(json.dumps(probe));item['sha256']=digest(path.read_bytes())
+            with self.assertRaises(Blocked):validate_batch_profile(value)
+
+    def test_probe_source_snapshot_binding(self):
+        from r3.execution_acceptance import validate_batch_profile
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);value=self.batch_profile(root,root/'profile.json')
+            release=root/'old-release';(release/'r3').mkdir(parents=True)
+            decoder='r3/llava_batch_decode.py'
+            (release/decoder).write_bytes((Path(__file__).resolve().parent/decoder).read_bytes())
+            source=release/'r3'
+            sha=digest(json.dumps({p.relative_to(source).as_posix():digest(p.read_bytes()) for p in sorted(source.rglob('*.py'))},sort_keys=True))
+            item=value['batch_probe_receipts'][0];path=Path(item['path'])
+            path.write_text(json.dumps(dict(status='PASS',model='llava7',code_sha256=sha,test_fixture=True)))
+            item.update(sha256=digest(path.read_bytes()),source_release=str(release),source_code_sha256=sha)
+            validate_batch_profile(value)
+            (release/decoder).write_text('changed')
+            with self.assertRaises(Blocked):validate_batch_profile(value)
+
 
 if __name__=='__main__':unittest.main()

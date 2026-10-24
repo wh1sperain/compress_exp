@@ -28,10 +28,11 @@ def publish_once(path,value):
 
 def load_plan(plan_path,folder):
     plan=read(plan_path);folder=Path(folder)
-    if plan.get('backend')!='native-b1':raise Blocked('Unimplemented backend')
+    if plan.get('backend') not in ('native-b1','native-padded-batch'):raise Blocked('Unimplemented backend')
     spec_path=Path(plan['spec_path']);spec_sha=digest(spec_path.read_bytes())
     manifest=Path(plan['manifest_path']);manifest_sha=digest(manifest.read_bytes())
     profile=Path(plan['engine_profile_path']);profile_sha=digest(profile.read_bytes())
+    if read(profile).get('backend','native-b1')!=plan['backend']:raise Blocked('Plan/profile backend mismatch')
     identity={'manifest_sha256':manifest_sha,
               'source_lock_sha256':digest((folder/'manifests/source_lock.json').read_bytes()),
               'weights_lock_sha256':digest((folder/'manifests/model_weights_lock.json').read_bytes())}
@@ -43,13 +44,14 @@ def load_plan(plan_path,folder):
         identity.update(extra)
     acceptance=None
     if plan.get('execution_mode'):
-        from .execution_acceptance import validate,MODE
-        if plan['execution_mode']!=MODE or plan.get('inference_only') is not True:raise Blocked('Unknown execution policy')
+        from .execution_acceptance import validate,MODE,MODE_BATCH
+        if plan['execution_mode'] not in (MODE,MODE_BATCH) or plan.get('inference_only') is not True:raise Blocked('Unknown execution policy')
         if 'native_gate_path' in plan or 'engine_gate_path' in plan:raise Blocked('Reduced policy cannot impersonate gate mode')
         path=Path(plan['execution_acceptance_path'])
         if digest(path.read_bytes())!=plan.get('execution_acceptance_sha256'):raise Blocked('Execution acceptance changed')
         acceptance=validate(path,dict(identity,spec_sha256=spec_sha,engine_sha256=profile_sha,code_sha256=code_hash()),
-                            {j['model']+'/'+j['condition'] for j in plan['jobs']})
+                            {j['model']+'/'+j['condition'] for j in plan['jobs']},read(profile))
+        if acceptance['mode']!=plan['execution_mode'] or acceptance['backend']!=plan['backend']:raise Blocked('Execution plan policy/backend mismatch')
     else:
         for name in ('native_gate_path','engine_gate_path'):
             gate=require_gate(plan[name],spec_sha,profile_sha)

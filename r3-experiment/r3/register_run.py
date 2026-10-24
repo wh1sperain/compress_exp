@@ -22,7 +22,7 @@ def compile_plans(spec_path,manifest_path,profile_path,stages):
     for job in selected:groups.setdefault(job['model']+'/'+job['condition'],[]).append(job)
     inventory={'planned_records':len(selected),'counts':{s:counts[s] for s in stages},
                'deferred_stages':['rescue','stop'],'unsupported_conditions':sorted({j['model']+'/'+j['condition'] for j in selected if not supported(j)})}
-    base={'backend':'native-b1','spec_path':str(spec_path.resolve()),'spec_sha256':digest(spec_path.read_bytes()),
+    base={'backend':read(profile_path).get('backend','native-b1'),'spec_path':str(spec_path.resolve()),'spec_sha256':digest(spec_path.read_bytes()),
           'manifest_path':str(manifest_path.resolve()),'manifest_sha256':digest(manifest_path.read_bytes()),
           'engine_profile_path':str(profile_path.resolve()),'engine_sha256':profile_sha,'code_sha256':code_hash()}
     return base,groups,inventory
@@ -44,11 +44,11 @@ def register(folder,spec,manifest,profile,stages,native_gate,engine_gate,out,sup
     if execution_acceptance:
         if native_gate or engine_gate:raise Blocked('Choose strict gates or explicit reduced acceptance, never mix them')
         if set(stages)!={'main','controls'} or inventory['planned_records']!=21900:raise Blocked('Reduced acceptance covers complete main+controls only')
-        from .execution_acceptance import validate,MODE
+        from .execution_acceptance import validate
         bindings=dict(identity,spec_sha256=base['spec_sha256'],engine_sha256=base['engine_sha256'],code_sha256=base['code_sha256'])
-        validate(execution_acceptance,bindings,groups)
+        acceptance=validate(execution_acceptance,bindings,groups,read(profile))
         base.update(execution_acceptance_path=str(Path(execution_acceptance).resolve()),
-                    execution_acceptance_sha256=digest(Path(execution_acceptance).read_bytes()),execution_mode=MODE,inference_only=True)
+                    execution_acceptance_sha256=digest(Path(execution_acceptance).read_bytes()),execution_mode=acceptance['mode'],inference_only=True)
     else:
         if not native_gate or not engine_gate:raise Blocked('Strict mode requires both certification gates')
         for path in (native_gate,engine_gate):

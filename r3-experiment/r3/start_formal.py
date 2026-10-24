@@ -9,13 +9,14 @@ from .runner import publish_once, load_plan
 from .execution_acceptance import create
 from .register_run import register
 
-RUN_ID = 'r3-20261024-native-inference-v1'
+RUN_ID = 'r3-20261024-batch-inference-v1'
 AUTHORIZATION = '''用户要求删除冗余测试，将长程大幅削减为仅保证正常；随后明确：
 准备启动正式实验，不启动答案解析和评分，你回顾主方案，充分调度GPU资源进行推理。实验完成后下载所有结果到本地。
-本次按现有原生B1执行已冻结main+controls 21900次；不声称实现连续批处理或通过原完整认证。'''
+用户随后强调必须参考GPU_EXECUTION_R3.md：一份权重、多请求、连续补槽、完整剩余上限显存准入。
+本次原生完整prefill加经必要检查的多请求解码，执行main+controls 21900次；不声称通过原完整6000自然轨迹认证。'''
 
 
-def run(folder):
+def run(folder, approved_profile):
     folder = Path(folder); release = Path(__file__).resolve().parent.parent
     launch_path = folder/'telemetry/formal_inference_launch.json'
     import fcntl
@@ -40,13 +41,20 @@ def run(folder):
             target = cfg/(name+'.json'); publish_once(target, value); evidence.append(target)
         supplemental = read(folder/'telemetry/qwen4_supplemental_audit_launch.json')
         gpu = subprocess.run(['nvidia-smi', '--query-gpu=name,uuid,memory.total,driver_version', '--format=csv,noheader'], capture_output=True, text=True, check=True).stdout.strip()
-        profile = {'backend':'native-b1','dtype':'bfloat16','kv_dtype':'bfloat16','max_live_requests':1,
-                   'persistent_model':True,'parallel_model_copies':False,'continuous_batching':False,
-                   'performance_target_achieved':False,'gpu':gpu,'cpu_threads':4,
-                   'prefill_policy':'complete native request','sampler':'request-local PCG64 and GPU inverse CDF',
-                   'checkpoint_interval_tokens':128,'output_caps':{'llava7':2048,'mini8':2048,'qwen8':32768,'qwen4':32768},
-                   'parsing_enabled':False,'scoring_enabled':False,'original_research_settings_unchanged':True,
-                   'test_scope':'user-reduced checks; full native/engine certification not established'}
+        profile=read(approved_profile)
+        if profile.get('backend')!='native-padded-batch':raise Blocked('B1 fallback is not the requested GPU scheduling plan')
+        if profile.get('parsing_enabled') is not False or profile.get('scoring_enabled') is not False:raise Blocked('Inference-only profile required')
+        if not profile.get('batch_probe_receipts'):raise Blocked('Actual new-backend checks required before launch')
+        for item in profile['batch_probe_receipts']:
+            path=Path(item['path'])
+            if digest(path.read_bytes())!=item['sha256'] or read(path).get('status')!='PASS':raise Blocked('Batch check missing or changed')
+            evidence.append(path)
+        for item in profile.get('execution_check_receipts',[]):
+            path=Path(item['path'])
+            if digest(path.read_bytes())!=item['sha256'] or read(path).get('status')!='PASS':raise Blocked('Resource/slot execution check missing or changed')
+            evidence.append(path)
+        if len(profile.get('execution_check_receipts',[]))<6:raise Blocked('Three-family full-cap resource and slot checks required')
+        profile=dict(profile,gpu=gpu)
         profile_path = cfg/'engine_profile.json'; publish_once(profile_path, profile)
         spec = release/'round3_spec.json'
         manifest = folder/'manifests/frozen-inputs-v1/main_manifest.jsonl'
@@ -54,14 +62,14 @@ def run(folder):
         create(folder,spec,manifest,profile_path,supplemental['out'],supplemental['status_path'],
                evidence,AUTHORIZATION,['Full 6000-record natural equivalence matrix not run',
                'Full 32K long-context numeric matrix replaced by two 4096-step stability checks',
-               'Continuous batching/paged production backend not implemented'],acceptance)
+               'Padded continuous request batching implemented; paged KV and CUDA Graph optimizations not enabled'],acceptance)
         registration_dir = folder/'jobs'/RUN_ID
         receipt = register(folder,spec,manifest,profile_path,['main','controls'],None,None,registration_dir,
                            supplemental['out'],supplemental['status_path'],acceptance)
         for item in receipt['plans']: load_plan(item['path'],folder)
         output = folder/'raw'/RUN_ID; output.mkdir(parents=True)
         archive_dir = folder/'exports'/RUN_ID
-        env = dict(os.environ,OMP_NUM_THREADS='4',OPENBLAS_NUM_THREADS='1',TOKENIZERS_PARALLELISM='false')
+        env = dict(os.environ,OMP_NUM_THREADS='4',OPENBLAS_NUM_THREADS='1',TOKENIZERS_PARALLELISM='false',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1')
         with (output/'lifecycle-launch.log').open('xb') as log:
             child = subprocess.Popen(['/root/miniconda3/bin/python','-u','-m','r3.formal_lifecycle',
                 '--folder',str(folder),'--registration',str(registration_dir/'registration.json'),
@@ -71,12 +79,12 @@ def run(folder):
                       started_at=time.time(),production_started=True,planned_records=21900,
                       registration=str(registration_dir/'registration.json'),output=str(output),archive_dir=str(archive_dir),
                       inference_only=True,parsing_enabled=False,scoring_enabled=False,
-                      full_native_engine_certification=False,backend='native-b1')
+                      full_native_engine_certification=False,backend=profile['backend'],max_live_requests=profile['max_live_requests'])
         publish_once(launch_path,launch)
         return launch
 
 
 if __name__=='__main__':
     import argparse
-    p=argparse.ArgumentParser();p.add_argument('--folder',required=True);a=p.parse_args()
-    print(json.dumps(run(a.folder)))
+    p=argparse.ArgumentParser();p.add_argument('--folder',required=True);p.add_argument('--approved-profile',required=True);a=p.parse_args()
+    print(json.dumps(run(a.folder,a.approved_profile)))
