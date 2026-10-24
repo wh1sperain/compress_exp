@@ -46,11 +46,19 @@ def run(folder,method,out,model_key):
     config=VTRConfig(enabled=method!='Full',strategy='priortr',prune_layer=3,
                      keep_ratio=ratio,keep_tokens=None,query_aggregation='question',head_aggregation='mean')
     model,info=VTRQwen3VLForConditionalGeneration.from_pretrained(
-        lock['path'],vtr_config=config,dtype=torch.bfloat16,device_map={'':'cuda:0'},
+        lock['path'],dtype=torch.bfloat16,device_map={'':'cuda:0'},
         attn_implementation='eager',local_files_only=True,output_loading_info=True)
     write(out.with_suffix('.loading.json'),info)
     if any(info.get(k) for k in ('missing_keys','unexpected_keys','mismatched_keys','error_msgs')):
         raise Blocked('Qwen checkpoint loading mismatch')
+    # Follow the author's from_pretrained_vtr post-load setup exactly, while
+    # retaining HF's loading_info tuple for strict tensor-loading acceptance.
+    # Passing VTRConfig through HF kwargs leaks it into GenerationConfig.
+    model.vtr_config=config
+    model.vtr_strategy=model._create_strategy(config.strategy)
+    from visual_token_pruning.strategy.clse import apply_clse_defaults
+    apply_clse_defaults(config,model.config)
+    if config.enabled:model._replace_text_model()
     model.eval().requires_grad_(False)
     processor=Qwen3VLProcessor.from_pretrained(lock['path'],local_files_only=True,
                                              min_pixels=262144,max_pixels=4194304)

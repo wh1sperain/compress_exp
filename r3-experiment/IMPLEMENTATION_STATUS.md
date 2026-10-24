@@ -56,3 +56,5 @@
 2026-10-24 09:22：全部五套模型/CLIP权重准备完成。FastVFull、FastV50/25短合成生成通过，前两层675、后续分别675/387/243 token，加载无缺失/多余参数；仍不是完整KV/logits/长轨迹认证。Mini严格加载失败：391个unexpected keys全部属于checkpoint内vision tower，零missing/mismatched。作者延迟构造未建立该子模块；使用作者已有unfreeze_mm_vision_tower构造开关提前建立模块，使checkpoint权重正常接收，随后明确冻结全部参数。未忽略任何不匹配键，未改作者算法，原失败保留。18项CPU测试通过，Mini独立新attempt待GPU验证。
 
 2026-10-24 09:37：Mini独立smoke协调器完成、退出0（完整认证仍false）。新增Qwen作者原生模块接入：进程内按原transformers包名载入冻结作者qwen3目录，不改安装目录、不执行作者setup删除逻辑；独立qwen环境使用作者README要求的transformers f8f2834e1a并检查pip解析的完整commit来源，保留Blackwell torch。新增Full/PriorTR50/25合成图检查入口、严格加载回执及逐层输入长度记录。18项CPU检查与语法检查通过，Qwen运行时尚待验证。正式runner、五任务输入审计与长/自然门槛未完成。
+
+2026-10-24 09:52：Qwen隔离环境安装成功，但Full模型加载将vtr_config作为HF kwargs传入，触发GenerationConfig序列化错误。已按冻结作者from_pretrained_vtr的原顺序改为加载完成后设置VTRConfig、strategy和text model；继续保留严格loading_info验收，不给VTRConfig伪造序列化方法。原失败保存，新attempt复验三组，未产生研究答案。
