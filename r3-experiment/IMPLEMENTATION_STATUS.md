@@ -60,3 +60,5 @@
 2026-10-24 09:52：Qwen隔离环境安装成功，但Full模型加载将vtr_config作为HF kwargs传入，触发GenerationConfig序列化错误。已按冻结作者from_pretrained_vtr的原顺序改为加载完成后设置VTRConfig、strategy和text model；继续保留严格loading_info验收，不给VTRConfig伪造序列化方法。原失败保存，新attempt复验三组，未产生研究答案。
 
 2026-10-24 10:07：Qwen已完成权重载入，写加载诊断时HF5返回set导致JSON序列化失败。新增保留全部键/shape的递归转换，不吞掉缺失或不匹配；新增回归测试，19项CPU通过。原失败保留，独立新attempt继续Qwen三组检查；正式研究未开始。
+
+2026-10-24 10:22：QwenFull/PriorTR50/25合成短生成全部完成、协调器退出0；这不是长轨迹或后端认证。数据盘仅发现MathVista及旧Doc/Info池，ChartQA/GQA尚待官方来源准备。新增500/100清单冻结CLI：要求逐模型输入审计字段与上下文预算、拒绝重复UID/覆盖、生成侧字段白名单、嵌套审计白名单和评分答案隔离，记录清单SHA与排除记录。20项CPU测试通过（含600题合成清单完整性/标签不泄露/不可覆盖）；尚未冻结真实样本。

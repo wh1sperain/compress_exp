@@ -18,6 +18,25 @@ from pathlib import Path
 import json
 
 class CoreTests(unittest.TestCase):
+    def test_manifest_freeze_is_complete_label_isolated_and_immutable(self):
+        from r3.manifest import freeze
+        rows=[]
+        for task in TASKS:
+            for i in range(120):
+                audit=dict(eligible=True,processor_sha256='p',prompt_sha256='t',expanded_prompt_tokens=700,
+                           visual_tokens=576,processed_size=[336,336],native_context=4096,hidden_answer='SECRET')
+                rows.append(dict(uid=f'{task}:{i}',task=task,image_sha256=f'{task}:{i}',image_path='/image',
+                    question='question',answers=['SECRET'],rationale='SECRET',source_revision='fixed',
+                    single_image=True,rgb_decodable=True,public_label=True,
+                    native_inputs={m:dict(audit) for m in ['llava7','qwen8','mini8']}))
+        with tempfile.TemporaryDirectory() as d:
+            out=Path(d)/'frozen';freeze(rows,out)
+            self.assertEqual(len((out/'main_manifest.jsonl').read_text().splitlines()),500)
+            self.assertEqual(len((out/'calibration_manifest.jsonl').read_text().splitlines()),100)
+            self.assertNotIn('SECRET',(out/'main_manifest.jsonl').read_text())
+            self.assertIn('SECRET',(out/'scoring_labels.json').read_text())
+            with self.assertRaises(Blocked):freeze(rows,out)
+            with self.assertRaises(Blocked):select(rows+[rows[0]])
     def test_hf5_loading_receipt_preserves_failures(self):
         from r3.qwen_smoke import loading_receipt
         info={'missing_keys':{'b','a'},'unexpected_keys':set(),'mismatched_keys':{'x':((2,),(3,))}}
