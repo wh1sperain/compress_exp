@@ -1,0 +1,10 @@
+.local*/
+__pycache__/
+*.pyc
+vendor/
+outputs/
+*.npz
+*.pt
+*.safetensors
+.env*
+config.txt

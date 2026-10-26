@@ -1,0 +1,769 @@
+{
+  "protocol": "r4-v1-draft-20261026",
+  "discovery_questions": 150,
+  "full_review_records": 450,
+  "planned_condition_records": 6750,
+  "selection_receipt": {
+    "source_sha256": "9dc50dac4a5da8c8c1682c5fe3dff67fbb03303559c992ae52ace5856692439a",
+    "excluded_source_sha256": null,
+    "panel_sha256": "6da9a53a07ffc3f3c6ebb38be26ce38c93b5b69e80738b82e936dfb59a23d508",
+    "protocol_sha256": "61612281937f808968f9aa525eaab58f52de151efa5e9f2b5c29f11e998784b0",
+    "questions": 150,
+    "jobs": 6750,
+    "labels_in_generation": false,
+    "human_annotation_complete": false,
+    "formal_ready": false
+  },
+  "panel": [
+    {
+      "uid": "ChartQA-human-test:584",
+      "task": "ChartQA-human-test",
+      "image_sha256": "d977b6ff3f63d27e7d56bb45d1bf068c579999232de8373017fd16e75acf523a"
+    },
+    {
+      "uid": "ChartQA-human-test:1038",
+      "task": "ChartQA-human-test",
+      "image_sha256": "a3215fa26342a4a33aa3f9697af1cafa1deba825ef301a10a87644b56ff34a01"
+    },
+    {
+      "uid": "ChartQA-human-test:959",
+      "task": "ChartQA-human-test",
+      "image_sha256": "ab671b36e269b953d342ad13e6b053995aee0ba48150910df2dd728e9aa26522"
+    },
+    {
+      "uid": "ChartQA-human-test:711",
+      "task": "ChartQA-human-test",
+      "image_sha256": "b61ba6ae478702882f1b1e936bacd12535119af0ff6d97e044d051187dc88a26"
+    },
+    {
+      "uid": "ChartQA-human-test:768",
+      "task": "ChartQA-human-test",
+      "image_sha256": "70db6d37af206ca7cab7bc6e315dccf7542d31a6f9f1d9c79d9e6ab86a85bfd4"
+    },
+    {
+      "uid": "ChartQA-human-test:1015",
+      "task": "ChartQA-human-test",
+      "image_sha256": "92c988b82ea6e6a0256fce0888d6e32955cfb4748dcd7217de13e2822eb43c78"
+    },
+    {
+      "uid": "ChartQA-human-test:881",
+      "task": "ChartQA-human-test",
+      "image_sha256": "bab61d34e00f0335acb7017fa02f110b49b2b47261502926deb2c5dd75fdc922"
+    },
+    {
+      "uid": "ChartQA-human-test:985",
+      "task": "ChartQA-human-test",
+      "image_sha256": "f0b6e5dfc46a7d693bbde7dd5561734365dcaad2e15ee7579f96f6727ae35433"
+    },
+    {
+      "uid": "ChartQA-human-test:1046",
+      "task": "ChartQA-human-test",
+      "image_sha256": "73c3e6bae185e7f709c95ecd85ef942508af684432d9b89dd1ff44dfd938a5c3"
+    },
+    {
+      "uid": "ChartQA-human-test:1126",
+      "task": "ChartQA-human-test",
+      "image_sha256": "4258391a16793156cda468aaf251725ec7942ef3cf10c0a9e27b45c9d5622ac2"
+    },
+    {
+      "uid": "ChartQA-human-test:1049",
+      "task": "ChartQA-human-test",
+      "image_sha256": "195c53ef17e90664d4a57329705fa4e99f05356ede4bfcde670f114d4a9edb99"
+    },
+    {
+      "uid": "ChartQA-human-test:432",
+      "task": "ChartQA-human-test",
+      "image_sha256": "4a6bdd360810840e706d3a856ea9b48c53cb01bf7bb883805ba51e38b744e650"
+    },
+    {
+      "uid": "ChartQA-human-test:583",
+      "task": "ChartQA-human-test",
+      "image_sha256": "53149749f771c4fc901e875de47f51f793ee843da2bdd57d51963abe8a5bc02a"
+    },
+    {
+      "uid": "ChartQA-human-test:488",
+      "task": "ChartQA-human-test",
+      "image_sha256": "cf5bee69bfab7b365aca0fe56f31f0aa8a8b0badabe442fedb0756313018dd8b"
+    },
+    {
+      "uid": "ChartQA-human-test:1244",
+      "task": "ChartQA-human-test",
+      "image_sha256": "593499256913152126e478b59764834a277dfdc116da20c003273cc5c75c6b2f"
+    },
+    {
+      "uid": "ChartQA-human-test:1113",
+      "task": "ChartQA-human-test",
+      "image_sha256": "43e82c69978f533be6dd0849509254fe5851ddbff82265fc908140e09635d877"
+    },
+    {
+      "uid": "ChartQA-human-test:1150",
+      "task": "ChartQA-human-test",
+      "image_sha256": "f1e3d3a7838f5dc6836d84cd66e858feb7a860e3e7562422d2ac35870dfb52d5"
+    },
+    {
+      "uid": "ChartQA-human-test:183",
+      "task": "ChartQA-human-test",
+      "image_sha256": "83d3226af606d47cce1e8e617c4fed6c511d154cfd0c3a8b47e9c5c4517cfec5"
+    },
+    {
+      "uid": "ChartQA-human-test:41",
+      "task": "ChartQA-human-test",
+      "image_sha256": "4083350b8672345c87afbe7de31f37090486fca0d2571b7fb6713af3d3ad22b9"
+    },
+    {
+      "uid": "ChartQA-human-test:1091",
+      "task": "ChartQA-human-test",
+      "image_sha256": "a715523617c2ee1247067ba95b4a68cdbd2881b1b84a4307f4a97ceb06a4a092"
+    },
+    {
+      "uid": "ChartQA-human-test:30",
+      "task": "ChartQA-human-test",
+      "image_sha256": "a0983971db2f9409100170f25f637852af1be88d8db60ab9fc5ce8a94291f272"
+    },
+    {
+      "uid": "ChartQA-human-test:21",
+      "task": "ChartQA-human-test",
+      "image_sha256": "9683c7fe1ffada5ca4a8c519dc8164e0ed7cf69ebcdaec8ccdff9eab06e3fd80"
+    },
+    {
+      "uid": "ChartQA-human-test:161",
+      "task": "ChartQA-human-test",
+      "image_sha256": "e22a89616173ce81b2694d561f788b8aa6697aaec65bcf5c86e6fe150c0abdcb"
+    },
+    {
+      "uid": "ChartQA-human-test:1051",
+      "task": "ChartQA-human-test",
+      "image_sha256": "96222422ad6f3efb759fb1b87e9c9150fb3657a6afba67a24037d9c66bf6217d"
+    },
+    {
+      "uid": "ChartQA-human-test:445",
+      "task": "ChartQA-human-test",
+      "image_sha256": "58e4b4ecd950db570ac8538f81b323cae659c4f5e311fc116ce4c2c8becc89ab"
+    },
+    {
+      "uid": "ChartQA-human-test:733",
+      "task": "ChartQA-human-test",
+      "image_sha256": "44913fbc75c4079ffa67bef5dbfd5412d19622c942ef49e4f88577cf2d5da444"
+    },
+    {
+      "uid": "ChartQA-human-test:156",
+      "task": "ChartQA-human-test",
+      "image_sha256": "72a072845b00d7b02227494e0ab92165abf19dfc88fa79fff189338d0bd1d28a"
+    },
+    {
+      "uid": "ChartQA-human-test:526",
+      "task": "ChartQA-human-test",
+      "image_sha256": "31a9dc62fd1da74bdadda076d516ab895ef9f387a966cf55002fd0ca03361ee1"
+    },
+    {
+      "uid": "ChartQA-human-test:474",
+      "task": "ChartQA-human-test",
+      "image_sha256": "d0ef0b0e7f9e151cd2a69066274c2c315b60b13e130eae86fa4e00599e64b8c9"
+    },
+    {
+      "uid": "ChartQA-human-test:1158",
+      "task": "ChartQA-human-test",
+      "image_sha256": "f42f3e7f3a1cc170d643ecb5007b5bd7beb7de314cd2c65db70ebe108a496169"
+    },
+    {
+      "uid": "DocVQA:61403",
+      "task": "DocVQA",
+      "image_sha256": "d0e713f5053267bac269acbf29eacb70c83abd70243767b3648d41911fbc6906"
+    },
+    {
+      "uid": "DocVQA:42115",
+      "task": "DocVQA",
+      "image_sha256": "248f6dab810f2978a13ba4f50ab3523cfca10f00264c8acf0c25a760e6cbe5bd"
+    },
+    {
+      "uid": "DocVQA:43735",
+      "task": "DocVQA",
+      "image_sha256": "4b6f6730d1120307bbc53c9fe3fc1851e4bb804ad965b89d8a2c3a58420598f2"
+    },
+    {
+      "uid": "DocVQA:9481",
+      "task": "DocVQA",
+      "image_sha256": "662036f1f74a862d7cee800ffbd903be6b5f6ee6b888c6661ac5e52274abad12"
+    },
+    {
+      "uid": "DocVQA:57029",
+      "task": "DocVQA",
+      "image_sha256": "4a9c144a411a4c197e2368fa895e1e5b6127524d40e939ee0274051c85f50d89"
+    },
+    {
+      "uid": "DocVQA:53472",
+      "task": "DocVQA",
+      "image_sha256": "3b65259589dd64dd3c9e538d7e9af98f18615e3a9d6942d6ccb1c662ed4c3bc9"
+    },
+    {
+      "uid": "DocVQA:4913",
+      "task": "DocVQA",
+      "image_sha256": "2a3231f96f5766c8f228fcba5ac40e320ae9569f6e662ccba667dff62fbaff09"
+    },
+    {
+      "uid": "DocVQA:61481",
+      "task": "DocVQA",
+      "image_sha256": "6205718698b5f8324d2ee29f8eca63c3f7b1769b0bc68bbc6051f3a68ca1e0cd"
+    },
+    {
+      "uid": "DocVQA:60625",
+      "task": "DocVQA",
+      "image_sha256": "77dfbd99eeea500dd7b95cabb306de084a57d9be7ea99a5f70337e853df39b9a"
+    },
+    {
+      "uid": "DocVQA:4964",
+      "task": "DocVQA",
+      "image_sha256": "514b14a017e507d0e6aaa6db7f40c71d67ef552640195bd8ab49a80034ebeaef"
+    },
+    {
+      "uid": "DocVQA:64770",
+      "task": "DocVQA",
+      "image_sha256": "c6a330f052f3e02623aa8752925ce846bfc4fed1470c63e2e308415f0766fcc2"
+    },
+    {
+      "uid": "DocVQA:56859",
+      "task": "DocVQA",
+      "image_sha256": "aac62b7458fb040d7f869b3c9ef5b61ccece5b8b9a9c09a61ffec796d0cfbef0"
+    },
+    {
+      "uid": "DocVQA:61245",
+      "task": "DocVQA",
+      "image_sha256": "badb62fd644785a984db3a4caeff3af1cf38bd3e11aaaf61b136aa75f59e5e1e"
+    },
+    {
+      "uid": "DocVQA:58408",
+      "task": "DocVQA",
+      "image_sha256": "599f06cb2b2eab0249d703d0839b6670e37d710af54c3ccbb5a47f5ba0ade41d"
+    },
+    {
+      "uid": "DocVQA:56816",
+      "task": "DocVQA",
+      "image_sha256": "34b59508ab61df56902d38a8afa02f7eb41963d691a0da789c66788c05e7603b"
+    },
+    {
+      "uid": "DocVQA:60874",
+      "task": "DocVQA",
+      "image_sha256": "59f5907b28daf230b7c0cb92062e0350d94852b21182d5c1057da2e11d5904d7"
+    },
+    {
+      "uid": "DocVQA:56370",
+      "task": "DocVQA",
+      "image_sha256": "26ded0d914ce29431d3eed8b9433b8d2df4f47b76cd4407c21d9fe93b0efecf1"
+    },
+    {
+      "uid": "DocVQA:62358",
+      "task": "DocVQA",
+      "image_sha256": "ef9cec55c8735d72eef8a5ffe68625626b79a9de9f19ac59d87d09b574b684de"
+    },
+    {
+      "uid": "DocVQA:60428",
+      "task": "DocVQA",
+      "image_sha256": "a918422a954768b78249bfeaece2df004bbf3cc032c87cc342dc48b21be381d4"
+    },
+    {
+      "uid": "DocVQA:52442",
+      "task": "DocVQA",
+      "image_sha256": "fda518211ff3dfaceb1eaf15dd2390bb5f68bb30b22beddc9bd269580aa67655"
+    },
+    {
+      "uid": "DocVQA:60512",
+      "task": "DocVQA",
+      "image_sha256": "ca9371ae4a65487378f476b7e5454d79d45333b7443a41f4fd50e79d95b04dd1"
+    },
+    {
+      "uid": "DocVQA:63109",
+      "task": "DocVQA",
+      "image_sha256": "9ca68ced9a82329b65aaf4201e4694d8bce731324eea10e8a38d2170a0cba407"
+    },
+    {
+      "uid": "DocVQA:57530",
+      "task": "DocVQA",
+      "image_sha256": "88bcbfd8eaae5f0fd0cbb370502cfb266315fab357e88ca455b3ff82cbb13348"
+    },
+    {
+      "uid": "DocVQA:58337",
+      "task": "DocVQA",
+      "image_sha256": "ce5ba8199ffcceb6b5d0958f01ecc144512206fa3130e913a3f0afeb068a8a3b"
+    },
+    {
+      "uid": "DocVQA:38946",
+      "task": "DocVQA",
+      "image_sha256": "c6e859cfffedc4bf4c56a6e459edcbfe104779dab5f125626c7aa72641cd7e81"
+    },
+    {
+      "uid": "DocVQA:65023",
+      "task": "DocVQA",
+      "image_sha256": "f5818be44f9e2afa544f1a875d369a9b0dfba2fa327190222749e7728567b1ab"
+    },
+    {
+      "uid": "DocVQA:4445",
+      "task": "DocVQA",
+      "image_sha256": "cd785b0435b3ca4d80aac5cc05135da8d454197de80016509bd1db392fea8f07"
+    },
+    {
+      "uid": "DocVQA:58430",
+      "task": "DocVQA",
+      "image_sha256": "891b1f0aaff9e8ed4edf64389ff1fe5a756173836020db14067e5daa8de070d2"
+    },
+    {
+      "uid": "DocVQA:36693",
+      "task": "DocVQA",
+      "image_sha256": "89a6dab8ddaff2db4c4f1cf86debaa94880140e1d745e68c7dc82060351d1f57"
+    },
+    {
+      "uid": "DocVQA:56296",
+      "task": "DocVQA",
+      "image_sha256": "a3e5368164000a0f00a2d7b592b23b8f0e0df7e6d60473858ddca5e6d6d7f92a"
+    },
+    {
+      "uid": "GQA-balanced-val:17260529",
+      "task": "GQA-balanced-val",
+      "image_sha256": "9964bee550117b59aa523d4058bd6764738071b253e760b3ec7232410cae022e"
+    },
+    {
+      "uid": "GQA-balanced-val:1727283",
+      "task": "GQA-balanced-val",
+      "image_sha256": "cd37c4e24e8fac0a9c957c5c8c65f63f42e52ded2b17d0ece3be72d2d1d66bcb"
+    },
+    {
+      "uid": "GQA-balanced-val:1228547",
+      "task": "GQA-balanced-val",
+      "image_sha256": "c4de6cc723a9ed98683932120eaaa1de9aab57fa029e3ff4e193c77a687e25cf"
+    },
+    {
+      "uid": "GQA-balanced-val:00975589",
+      "task": "GQA-balanced-val",
+      "image_sha256": "7a4799e0a9065beea70687fb39817579a28c4c22f8a0898febf7377aba33dac1"
+    },
+    {
+      "uid": "GQA-balanced-val:09658371",
+      "task": "GQA-balanced-val",
+      "image_sha256": "edf994f1affa4a1a82d62f03e1571462ae8c03b7c467f201928e229f3b6c4007"
+    },
+    {
+      "uid": "GQA-balanced-val:15485006",
+      "task": "GQA-balanced-val",
+      "image_sha256": "e20512e903e97f86f3ff2053ac7f8849116f5c0e2008444df70ea64392b75cfb"
+    },
+    {
+      "uid": "GQA-balanced-val:17710999",
+      "task": "GQA-balanced-val",
+      "image_sha256": "deef4f9f1fd8edf5e52f3a359692f976ab583c60880bf4f3d715a353554c8dca"
+    },
+    {
+      "uid": "GQA-balanced-val:00244722",
+      "task": "GQA-balanced-val",
+      "image_sha256": "f1569d2df6f23aae34d1b7a6cc3a15b174e0ef1f298a9be20d8b6e4bccd4a6ce"
+    },
+    {
+      "uid": "GQA-balanced-val:11799641",
+      "task": "GQA-balanced-val",
+      "image_sha256": "64716fae36e65e3b57ee7c1f0144140302c78db3f8af8ddf0e9917ba553746c0"
+    },
+    {
+      "uid": "GQA-balanced-val:06643379",
+      "task": "GQA-balanced-val",
+      "image_sha256": "4de69eabf77a7cd6d28fa8b7b2a1ac3aea874d4d97f9a450c830e82074ad047c"
+    },
+    {
+      "uid": "GQA-balanced-val:18191756",
+      "task": "GQA-balanced-val",
+      "image_sha256": "5752c97a9659c1d52e38057096d1884af0ff5a8af561bf219ae2f13db5cbdaa4"
+    },
+    {
+      "uid": "GQA-balanced-val:15124507",
+      "task": "GQA-balanced-val",
+      "image_sha256": "44269b4f9d1e3402a4b36dbb85ccbb0aca01d2570b45677e5f7cc3ac04a1d2b2"
+    },
+    {
+      "uid": "GQA-balanced-val:06623462",
+      "task": "GQA-balanced-val",
+      "image_sha256": "3dac1d28ff4b351b26e9674dcb20d3370349aa658106aec7be772fb34382d6c9"
+    },
+    {
+      "uid": "GQA-balanced-val:04834592",
+      "task": "GQA-balanced-val",
+      "image_sha256": "dc13e244229be4140824dd8895b8504d80898b9fb729510f0230cea0213f4652"
+    },
+    {
+      "uid": "GQA-balanced-val:07141482",
+      "task": "GQA-balanced-val",
+      "image_sha256": "d4713a97a0fa16023508e085f3798a633ed4329ec88f40341824f078826b0dd3"
+    },
+    {
+      "uid": "GQA-balanced-val:04235440",
+      "task": "GQA-balanced-val",
+      "image_sha256": "0e344969bc5409d75e0ac22568684c78b6d49ab1c094740445708fe45939c986"
+    },
+    {
+      "uid": "GQA-balanced-val:08561706",
+      "task": "GQA-balanced-val",
+      "image_sha256": "c769d28b6deead8e677163d740b57f8cb81c506276636430c84bdaf799cc425d"
+    },
+    {
+      "uid": "GQA-balanced-val:08581606",
+      "task": "GQA-balanced-val",
+      "image_sha256": "3b4e5b3d9f6b5e639e7392d273661d83decd9c5537e664beca2a029ac4740e64"
+    },
+    {
+      "uid": "GQA-balanced-val:11151847",
+      "task": "GQA-balanced-val",
+      "image_sha256": "c88e18d1dc05328a1af016f2d37d04cff460e598ef9b7cbe573e4dc44e247088"
+    },
+    {
+      "uid": "GQA-balanced-val:15127066",
+      "task": "GQA-balanced-val",
+      "image_sha256": "f67a79e60bcafc62c80c0dd8237bf20252d17a7eacfcdba524d02053014f8c86"
+    },
+    {
+      "uid": "GQA-balanced-val:07392837",
+      "task": "GQA-balanced-val",
+      "image_sha256": "1c028c241728aab8fec527975f54e028050faa99490089cc96cb510641d1a946"
+    },
+    {
+      "uid": "GQA-balanced-val:16679262",
+      "task": "GQA-balanced-val",
+      "image_sha256": "c2c976da05b12e488afd2f2a42da18d1294c1c101ea66bfd0913aa2d2bd766b8"
+    },
+    {
+      "uid": "GQA-balanced-val:17791361",
+      "task": "GQA-balanced-val",
+      "image_sha256": "f2fa918d61fe2a339aaf887a46a910a550b505cb63d978d7046b47dc68022aaf"
+    },
+    {
+      "uid": "GQA-balanced-val:03787148",
+      "task": "GQA-balanced-val",
+      "image_sha256": "90a819ea37e31e9b196c4b17128f16d43e04070d886177e93f83981b46bb8850"
+    },
+    {
+      "uid": "GQA-balanced-val:17167801",
+      "task": "GQA-balanced-val",
+      "image_sha256": "262f165be189265417fc25f53fa6e8fbd8b00e503aa4ffd97e9a26cddd4ad649"
+    },
+    {
+      "uid": "GQA-balanced-val:07652094",
+      "task": "GQA-balanced-val",
+      "image_sha256": "90fd86b782adb8cb998cd74561d57fa1fec6e9cc9c2b7acd987da337ba5814aa"
+    },
+    {
+      "uid": "GQA-balanced-val:03775923",
+      "task": "GQA-balanced-val",
+      "image_sha256": "5db6e6f0f6b9b10265011bd65fe31755980be5f25947190a79f4478372fed333"
+    },
+    {
+      "uid": "GQA-balanced-val:10560496",
+      "task": "GQA-balanced-val",
+      "image_sha256": "93dee9cd6546fc275831673e8e2db2a1988343978919600d3f054d41582020f4"
+    },
+    {
+      "uid": "GQA-balanced-val:06437958",
+      "task": "GQA-balanced-val",
+      "image_sha256": "16543f487d5e53c830e21bef0b330a1fb217f12c92af468876cc987ec306cb30"
+    },
+    {
+      "uid": "GQA-balanced-val:19424301",
+      "task": "GQA-balanced-val",
+      "image_sha256": "989c72462ad333bcd611abedfc10cb55378c7bb7324c56811c3c62e2d6fd20e3"
+    },
+    {
+      "uid": "InfographicVQA:92459",
+      "task": "InfographicVQA",
+      "image_sha256": "6d5f9217cfd25294c12fd8bffafd9e7b02ba0e8e92b5a3c2e14eb82dc6a1e936"
+    },
+    {
+      "uid": "InfographicVQA:69473",
+      "task": "InfographicVQA",
+      "image_sha256": "02672e94d62e35e87b33437d1756a3de0d016cb94eced93b9dc71caf24313723"
+    },
+    {
+      "uid": "InfographicVQA:93291",
+      "task": "InfographicVQA",
+      "image_sha256": "8aeb6d7c519c9b8db5f2390219ea3d9bb506716aa5748030141db889c0df27f4"
+    },
+    {
+      "uid": "InfographicVQA:98154",
+      "task": "InfographicVQA",
+      "image_sha256": "ef4e0bfa128accc1a56cd9bc8a461b8454ac6e476aede71836c4712f7ab703f4"
+    },
+    {
+      "uid": "InfographicVQA:92451",
+      "task": "InfographicVQA",
+      "image_sha256": "10dbc2524b1e27d3ddaaa26f65baf199b074e81718a0fa50727c7fc239f83239"
+    },
+    {
+      "uid": "InfographicVQA:96975",
+      "task": "InfographicVQA",
+      "image_sha256": "d7f19aad1b9a0842f6abd40a7cd314ef08dca4a84af8df6951c83da4d6d184f2"
+    },
+    {
+      "uid": "InfographicVQA:92729",
+      "task": "InfographicVQA",
+      "image_sha256": "e73e80e06de364cc420db049ea3edf00625abe9a7f665c886fe534ece75cf2fc"
+    },
+    {
+      "uid": "InfographicVQA:93431",
+      "task": "InfographicVQA",
+      "image_sha256": "cd3779426d5147fa7b8a7a4cd232be458d058a776c14999b884ef14819af159b"
+    },
+    {
+      "uid": "InfographicVQA:96096",
+      "task": "InfographicVQA",
+      "image_sha256": "07cc8469cc9526f4909a1bfcfca74cba5809e02cae02fa82d85ce7f7710bb25e"
+    },
+    {
+      "uid": "InfographicVQA:92335",
+      "task": "InfographicVQA",
+      "image_sha256": "9f9c3014af3596a31e93b92bca63b21b5bfa6f7beab29bf7d700d13d7f7e2f8e"
+    },
+    {
+      "uid": "InfographicVQA:91312",
+      "task": "InfographicVQA",
+      "image_sha256": "7995f95b7ec93a479eb04e0f258c0d198c94d8647ce2f67a726355e9b0f93b5d"
+    },
+    {
+      "uid": "InfographicVQA:98198",
+      "task": "InfographicVQA",
+      "image_sha256": "00a6df30bc540f8767b1abc6b5aced7a26f38a3e4f3bfb63a251fde0b3ac96a8"
+    },
+    {
+      "uid": "InfographicVQA:95915",
+      "task": "InfographicVQA",
+      "image_sha256": "e6b35afd04f09d4703d4d3ca9fb0bbf9ae1b83adc0856c7ce609f719e6d3a23b"
+    },
+    {
+      "uid": "InfographicVQA:93119",
+      "task": "InfographicVQA",
+      "image_sha256": "0456a131a7babef570ac567e036962d32d01c3b2f275c9d466d5cf224528d6d0"
+    },
+    {
+      "uid": "InfographicVQA:97868",
+      "task": "InfographicVQA",
+      "image_sha256": "edd5ec227851d534ea8a9c6e67b5fb100cc8634bb1385321fa99324b25182fac"
+    },
+    {
+      "uid": "InfographicVQA:91401",
+      "task": "InfographicVQA",
+      "image_sha256": "86aa144511bcad3778ec26060e7c93b38f1ae591c9f80e7083276576eb5141b2"
+    },
+    {
+      "uid": "InfographicVQA:81708",
+      "task": "InfographicVQA",
+      "image_sha256": "f713a0a4f32f2613b7bb01ffe6b8b34b573ba03c223a0bfbd4d44193831b6dff"
+    },
+    {
+      "uid": "InfographicVQA:93227",
+      "task": "InfographicVQA",
+      "image_sha256": "ac2d1ca99dfad6fce5d64bcb745f345867652e7765d15f3856a5f7763cd75b5c"
+    },
+    {
+      "uid": "InfographicVQA:90993",
+      "task": "InfographicVQA",
+      "image_sha256": "5407e472abf6ce7fe63524fd0ca618721a1fda3db9d5203f3a3f4005522955dc"
+    },
+    {
+      "uid": "InfographicVQA:80911",
+      "task": "InfographicVQA",
+      "image_sha256": "4809550178c1d259585ebd8291191e82be5c5e7eca4b70b3cbd60dc060f1f80c"
+    },
+    {
+      "uid": "InfographicVQA:95446",
+      "task": "InfographicVQA",
+      "image_sha256": "49d7ed3d31b5cc61448cc9015781e936315e5d3a13bdab347f455e11b19e916a"
+    },
+    {
+      "uid": "InfographicVQA:80034",
+      "task": "InfographicVQA",
+      "image_sha256": "e9c4184deb6d58cf5cf414f39bc0a3cd0fe0f6f85cb3cdc9a8b2ded07d8f6f9e"
+    },
+    {
+      "uid": "InfographicVQA:93091",
+      "task": "InfographicVQA",
+      "image_sha256": "718c5e2837f14345d4960f2dd43528b9052aa0dc95c2ccf4e955b7c78215f9c1"
+    },
+    {
+      "uid": "InfographicVQA:97845",
+      "task": "InfographicVQA",
+      "image_sha256": "fd2ff9a244f2fb594c4d3ce10256b61f189b206be07138c17964886194d9903e"
+    },
+    {
+      "uid": "InfographicVQA:77625",
+      "task": "InfographicVQA",
+      "image_sha256": "ff6c3e8ffc9fac0a9b2eaa48a70f1d5bc6e49c24d8f08e701c1892bac5c02cf3"
+    },
+    {
+      "uid": "InfographicVQA:95732",
+      "task": "InfographicVQA",
+      "image_sha256": "e175eeffb566d981e0d7d1a7a7e456353a9ae1a5fdfcd8db395689bdd9716b82"
+    },
+    {
+      "uid": "InfographicVQA:80130",
+      "task": "InfographicVQA",
+      "image_sha256": "393c2e9b7e6df11aebabdd095094b8a14780550fbb23a504b326663bda538de9"
+    },
+    {
+      "uid": "InfographicVQA:93101",
+      "task": "InfographicVQA",
+      "image_sha256": "fbf2e8b2d77dcd7c449dcd8aeb522a88c59b81c7a004c3187cc1e300ea8fccab"
+    },
+    {
+      "uid": "InfographicVQA:91554",
+      "task": "InfographicVQA",
+      "image_sha256": "dea6a75da4c66a040ae3ca27e820ccfdb2db5dfd7313cbab492c35c638fa610d"
+    },
+    {
+      "uid": "InfographicVQA:93398",
+      "task": "InfographicVQA",
+      "image_sha256": "efc059eb9c92f0c37defb29f9960513fe7b84b84d568cda1e237d6a8d69c5726"
+    },
+    {
+      "uid": "MathVista-testmini:205",
+      "task": "MathVista-testmini",
+      "image_sha256": "9bda6a2f4d956da70e3dae5f447be5ec8b8241b27322eabe0cb9a19734c9ebbf"
+    },
+    {
+      "uid": "MathVista-testmini:203",
+      "task": "MathVista-testmini",
+      "image_sha256": "261792afc015930a6ab661c4b879dfd575a67001514c3cec30b70b4be703b61a"
+    },
+    {
+      "uid": "MathVista-testmini:394",
+      "task": "MathVista-testmini",
+      "image_sha256": "6adcfc5d68b1be367e328bc856835819f57fadfbe1452a60aa30b74deb4cfb41"
+    },
+    {
+      "uid": "MathVista-testmini:171",
+      "task": "MathVista-testmini",
+      "image_sha256": "38753126a5d864f7619d2cd6157b45c6f0b185cc1960e29176963190adbae42c"
+    },
+    {
+      "uid": "MathVista-testmini:307",
+      "task": "MathVista-testmini",
+      "image_sha256": "cca20b6b24ef0e3123b882accea8691c97804c29bf9e0284460f1c273e29eb6d"
+    },
+    {
+      "uid": "MathVista-testmini:694",
+      "task": "MathVista-testmini",
+      "image_sha256": "41b746b8d0b35232fed1198c899746fc2d6d8ebbc317a63c9f3e86ab7c3ad421"
+    },
+    {
+      "uid": "MathVista-testmini:83",
+      "task": "MathVista-testmini",
+      "image_sha256": "237f4e64461247700fc431744eb1cbeefef9c19d4ae57d9f484e6fa7adb5ff67"
+    },
+    {
+      "uid": "MathVista-testmini:200",
+      "task": "MathVista-testmini",
+      "image_sha256": "2853e1c8dd7290be5607ccd33600810325b06d307f4943efbd3c0299d70d4a48"
+    },
+    {
+      "uid": "MathVista-testmini:432",
+      "task": "MathVista-testmini",
+      "image_sha256": "b6786b04e23ea4de0050aae237c724e855a51b89ab2a77d8389bd25863e51640"
+    },
+    {
+      "uid": "MathVista-testmini:144",
+      "task": "MathVista-testmini",
+      "image_sha256": "193c75954461bb842da5e8f67ad5c31b4dabbcf6aee562f1132ecbd38347ee33"
+    },
+    {
+      "uid": "MathVista-testmini:266",
+      "task": "MathVista-testmini",
+      "image_sha256": "b38ea6972f5aecc919f6a065dd58af5a7d12f3c10553a6a0f7f6e3d4a6f64432"
+    },
+    {
+      "uid": "MathVista-testmini:933",
+      "task": "MathVista-testmini",
+      "image_sha256": "2fdf6bb7004ed119e85402e5168cbcd377f01199e62471152a6d13bf9a2dfad7"
+    },
+    {
+      "uid": "MathVista-testmini:591",
+      "task": "MathVista-testmini",
+      "image_sha256": "773558eef0d100db8a04c1f09bad90a8c773cea42de88c6a83048610ad7bad5f"
+    },
+    {
+      "uid": "MathVista-testmini:815",
+      "task": "MathVista-testmini",
+      "image_sha256": "41d7be0b46bfdb438f260e32a520fb959743dd76fe6fc920928bcb80e29ec2e0"
+    },
+    {
+      "uid": "MathVista-testmini:610",
+      "task": "MathVista-testmini",
+      "image_sha256": "3a84e39a3a0530fd1c636b2529859216e4227163013babc8c667eb500235fa5b"
+    },
+    {
+      "uid": "MathVista-testmini:116",
+      "task": "MathVista-testmini",
+      "image_sha256": "4f9a0b3c95bc7eed6d6206f03b8e4fe3e567557872a96bee1641e0b37d653673"
+    },
+    {
+      "uid": "MathVista-testmini:680",
+      "task": "MathVista-testmini",
+      "image_sha256": "6419bf3555fd9d5551ed5f4e93efe6fa5e2f6f586e74d97bc29d5a54c31fbb1c"
+    },
+    {
+      "uid": "MathVista-testmini:994",
+      "task": "MathVista-testmini",
+      "image_sha256": "43b4112a21b905d907916b8bc812849827076e259e12547e8c39414e55a33b1f"
+    },
+    {
+      "uid": "MathVista-testmini:977",
+      "task": "MathVista-testmini",
+      "image_sha256": "df35d8c96c2866cb493987f0dd9b1762c5cc98e8e26680eae079415072b9e08c"
+    },
+    {
+      "uid": "MathVista-testmini:17",
+      "task": "MathVista-testmini",
+      "image_sha256": "16a911644262005e59c2e4022da13aa00fca3d473b6fcb2aadec89a9467d6af5"
+    },
+    {
+      "uid": "MathVista-testmini:19",
+      "task": "MathVista-testmini",
+      "image_sha256": "263e9d5ffa2fd96e6906f5e53551cb3e8645f9a6405f27007db6335c65370733"
+    },
+    {
+      "uid": "MathVista-testmini:793",
+      "task": "MathVista-testmini",
+      "image_sha256": "4444d0c9250668806c68640d634ac4be3462e77de95b73d7429bd61051b01dc3"
+    },
+    {
+      "uid": "MathVista-testmini:208",
+      "task": "MathVista-testmini",
+      "image_sha256": "8b5a0edb720f06f4a800e67d0fec2a138edb610e6ff405bf4279540e149abd3a"
+    },
+    {
+      "uid": "MathVista-testmini:120",
+      "task": "MathVista-testmini",
+      "image_sha256": "e4d8cab9a1dad270e328673a9180a980609d7fc6b8f44c5cfec9ce09dab46eca"
+    },
+    {
+      "uid": "MathVista-testmini:301",
+      "task": "MathVista-testmini",
+      "image_sha256": "8347b32a47660ccdc51d2f49012364248b7193b399c7cb9608bdece7d1935d70"
+    },
+    {
+      "uid": "MathVista-testmini:947",
+      "task": "MathVista-testmini",
+      "image_sha256": "6464dba40bd82b9c8e20fd50f9f4fde3f847ed35ffffe1611945d66194ddb42f"
+    },
+    {
+      "uid": "MathVista-testmini:367",
+      "task": "MathVista-testmini",
+      "image_sha256": "db6e573871f09b3b492a167cfe8a272ce253d9f3a8560f1be26d601c4ef015f8"
+    },
+    {
+      "uid": "MathVista-testmini:622",
+      "task": "MathVista-testmini",
+      "image_sha256": "eb1666af18e6c5f9dec6ca1343cf245dade228c71d786f4e630204a645154c72"
+    },
+    {
+      "uid": "MathVista-testmini:613",
+      "task": "MathVista-testmini",
+      "image_sha256": "11cd545f7d4dea19c51307be6ec3792553901ab5865d99a73376f645d8b843ae"
+    },
+    {
+      "uid": "MathVista-testmini:345",
+      "task": "MathVista-testmini",
+      "image_sha256": "cd178a0231c3b6fcaab8758c10a550e9552173b98c496091ed74f82eab2f3e9e"
+    }
+  ]
+}

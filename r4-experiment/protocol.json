@@ -1,0 +1,56 @@
+{
+  "protocol": "r4-v1-draft-20261026",
+  "model_id": "Qwen/Qwen3-VL-8B-Thinking",
+  "model_revision": "92f3c4b4feadd3a016ef468d103bb5f58b2a2c6b",
+  "dtype": "bfloat16",
+  "attention_backend": "sdpa",
+  "generation": {
+    "do_sample": true,
+    "temperature": 1.0,
+    "top_k": 20,
+    "top_p": 0.95,
+    "repetition_penalty": 1.0,
+    "presence_penalty": 0.0,
+    "min_new_tokens": 0,
+    "stop_on_repetition": false,
+    "stop_on_final_marker": false,
+    "quantization": false,
+    "kv_quantization": false,
+    "sampler": "per-request PCG64-generated uniforms, indexed by generated step, GPU top-k/top-p/inverse-CDF; validated CPU reference",
+    "sampler_sort": "logit descending, token id ascending for ties",
+    "max_new_tokens": 32768
+  },
+  "prompt": {
+    "suffix": "\n\nAfter reasoning, end your response with one line in this exact format: FINAL ANSWER: <answer>\nGive only the requested answer after FINAL ANSWER:, without extra explanation on that final line.",
+    "multiple_choice_suffix": "For this multiple-choice question, give only the option letter after FINAL ANSWER:.",
+    "system": "native conversation template only",
+    "special_think_tags_for_llava_or_mini": false
+  },
+  "processor": {
+    "min_pixels": 262144,
+    "max_pixels": 4194304
+  },
+  "context_limit": 65536,
+  "max_expanded_prompt_tokens": 8192,
+  "discovery_salt": "r4-discovery-v1-20261026",
+  "confirmation_salt": "r4-confirm-v1-20261026",
+  "sparse_layers": [
+    3,
+    12,
+    24
+  ],
+  "sparse_token_merge": false,
+  "hilo_candidate_rule": "min(1, 3*keep_ratio)",
+  "random_layer": 3,
+  "analysis": {
+    "bootstrap": 20000,
+    "seed": 20261026,
+    "unit": "image-cluster stratified by task",
+    "multiplicity": "14 contrasts versus Full x 5 tasks x 3 endpoints = 210; joint Bonferroni",
+    "quality": "separate per-task official metric; frozen DeepSeek extraction protocol",
+    "cap": "censored retained in all primary observed-length means",
+    "severe_growth": "compressed total output >= 2 * matched Full total output"
+  },
+  "runtime": "native author single-request reference; optimized batch profile requires new bound gate",
+  "formal_ready": false
+}

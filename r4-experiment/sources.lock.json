@@ -1,0 +1,17 @@
+{
+  "PriorTR": {
+    "url": "https://github.com/CodeChildCZJ/PriorTR.git",
+    "revision": "e442a4c14af1b333067a6b8310c9111cad922033",
+    "transformers": "f8f2834e1a"
+  },
+  "HiLo": {
+    "url": "https://github.com/sealost/Hi-Lo_Prune.git",
+    "revision": "29265e3b13ef89ecfd2cbd8803f1678a2ce1bdb6",
+    "transformers": "e2e8dbed13c6a8455fd85c15c9fa91c99d609010"
+  },
+  "r3_dependency": {
+    "repository": "wh1sperain/compress_exp",
+    "commit": "ce6097aaae53d9de21c1925070b03caf78ed20d9",
+    "directory": "r3-experiment"
+  }
+}
