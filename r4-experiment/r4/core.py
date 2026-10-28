@@ -36,7 +36,7 @@ def code_hash():
 def condition(name):
     if name == 'Full':
         return 'Full', 1.
-    if name not in CONDITIONS:
+    if name not in CONDITIONS and name not in tuple(m+str(r) for m in METHODS[:5] for r in (90,75,10)):
         raise ValueError('Unknown condition: ' + name)
     return name[:-2], int(name[-2:]) / 100
 

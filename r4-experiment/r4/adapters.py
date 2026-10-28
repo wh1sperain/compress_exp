@@ -27,6 +27,10 @@ def activate_prior(source):
     sys.path.insert(0,str(source))
 
 def vtr_parameters(method, ratio, spec, n=None):
+    if spec.get('author_defaults'):
+        # The new expansion uses author dataclass defaults, not R4-v1's
+        # hand-set three-stage pruning/absolute rounded budget.
+        return dict(enabled=method!='Full',strategy='priortr' if method=='Full' else method.lower(),keep_ratio=ratio)
     strategy={'Random':'fastv','Full':'priortr','Resolution':'priortr'}.get(method,method.lower())
     kw=dict(enabled=method not in ('Full','Resolution'),strategy=strategy,
             prune_layer=3,keep_ratio=ratio,query_aggregation='auto',head_aggregation='mean')
@@ -42,6 +46,7 @@ class Session:
     def __init__(self, name, checkpoint, author_root, spec, locks, disabled=False, native=False, keep100=False):
         import torch
         self.name=name;self.method,self.ratio=condition(name);self.spec=spec;self.trace={}
+        self.disabled=disabled
         if keep100:self.ratio=1.
         if native and name!='Full':raise ValueError('Native reference is Full only')
         key='HiLo' if self.method=='HiLo' else 'PriorTR'
@@ -71,7 +76,7 @@ class Session:
             import hilo_prune.models.qwen3_vl.modeling_hilo_qwen3_vl as hm
             cfg=AutoConfig.from_pretrained(checkpoint,local_files_only=True)
             cfg.text_config.hilo_keep_ratio=1. if disabled else self.ratio
-            cfg.text_config.hilo_candidate_ratio=1. if disabled else min(1.,3*self.ratio)
+            cfg.text_config.hilo_candidate_ratio=1. if disabled else (.3 if spec.get('author_defaults') else min(1.,3*self.ratio))
             cfg.text_config.hilo_prune_layer=2;cfg.text_config.hilo_use_fusion=not disabled
             cfg.text_config.hilo_fusion_strength=.3;cfg.text_config.hilo_top_k_ratio=.1
             cfg.text_config.hilo_attention_threshold=.05;cfg.text_config.hilo_fusion_layers=[0,1]
@@ -88,6 +93,7 @@ class Session:
         if any(info.get(k) for k in ('missing_keys','unexpected_keys','mismatched_keys','error_msgs')):
             raise ValueError('Checkpoint loading mismatch')
         self.model=model.eval().requires_grad_(False);self.processor=processor
+        self.layer_count=len(model.model.language_model.layers)
         self.handles=[]
         for i,layer in enumerate(model.model.language_model.layers):
             self.handles.append(layer.register_forward_pre_hook(self._layer_hook(i),with_kwargs=True))
@@ -146,6 +152,7 @@ class Session:
         self.job=job;self.override_indices=override_indices;self.forward_step=0
         self.expected_original_indices=expected_original_indices
         self.trace={'selections':[],'prefill_layers':{},'last_layers':{}}
+        self.trace['layer_count']=self.layer_count
         image=Image.open(row['image_path']).convert('RGB')
         text=question_text(row,self.spec['prompt']['suffix'])
         if extra_fact:text='Verified visual facts:\n'+extra_fact+'\n\n'+text
@@ -172,6 +179,9 @@ class Session:
         if hasattr(self.model,'vtr_config'):
             cfg=self.model.vtr_config
             cfg.keep_tokens=vtr_parameters(self.method,self.ratio,self.spec,actual).get('keep_tokens')
+            self.trace['method_parameters']=dict(vars(cfg))
+        elif self.method=='HiLo':
+            self.trace['method_parameters']={k:v for k,v in vars(self.model.config.text_config).items() if k.startswith('hilo_')}
         ids=batch['input_ids'][0].tolist()
         if len(ids)>self.spec['max_expanded_prompt_tokens']:raise ValueError('Input over frozen bound')
         self.trace.update(processed_visual_tokens=actual,image_grid_thw=batch['image_grid_thw'].tolist(),
@@ -179,7 +189,7 @@ class Session:
             effective_visual_keep_ratio=actual/full_n if self.method=='Resolution' else None)
         self.trace['expected_final_visual_tokens']=actual if self.method in ('Full','Resolution') else max(1,round(full_n*self.ratio))
         extra={}
-        if self.method=='HiLo':
+        if self.method=='HiLo' and not self.disabled:
             from hilo_prune.patches import image_to_merged_patch_features
             extra['image_tensor']=image_to_merged_patch_features(image,batch['image_grid_thw'][0].cpu(),
                 patch_size=self.processor.image_processor.patch_size,merge_size=self.processor.image_processor.merge_size).to(self.model.device)

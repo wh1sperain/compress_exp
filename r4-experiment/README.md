@@ -1,48 +1,58 @@
-# R4：视觉压缩、视觉事实错误与推理长尾
+# R4 扩展验证（当前默认方案）
 
-具体任务书见 [PLAN.md](PLAN.md)，方法版本见 [sources.lock.json](sources.lock.json)。
+[具体安排](PLAN.md)｜[用户V1.0原文](SPEC_V1_20261027.md)｜[协议](extension_protocol.json)。旧机制实验在[历史稿](PLAN_MECHANISMS_20261026.md)，`r4`旧入口不是本轮调度入口。
 
-本次交付为可执行的CPU准备/分析工具、作者原生GPU适配与诊断运行器、干预构造与续写组件。**尚未执行R4 GPU验收或正式实验**；没有捏造通过回执。GPU正式运行会拒绝缺少绑定验收的条件。历史R3的缩减测试不豁免本轮验收。
+两模型、六任务、26条件，正式46,800次；先导3,840次；鲁棒性按原文所有维度计算是**3,600次**（原文1,800为算术笔误）。不自动开跑。GPU验收、真实六任务清单和人工盲审未完成。
+
+## 本地准备
 
 ```powershell
 cd r4-experiment
 python -m unittest discover -s tests -v
-python -m r4.prepare --source /data/r3/main_manifest.jsonl --out .local-panel
-# 新确认集：必须排除整个R3的图像集合，另加任何其他已使用图像。
-python -m r4.prepare --source /data/new_candidates.jsonl --exclude-r3 /data/all_used_images.jsonl --confirm --methods PriorTR FastV HiLo --out .local-confirm
+# source-map使用固定revision/SHA、本地官方导出或HTTPS URL、字段映射、原图目录。
+python -m extension.import_sources --source-map /data/six-source-map.json --out .local-import
+python -m extension.prepare_data --candidates .local-import/candidates.jsonl --source-lock .local-import/source_lock.json --out .local-manifests
+python -m extension.plan_jobs --inputs .local-manifests/pilot_inputs.jsonl --phase precheck --out .local-precheck-jobs.jsonl
+python -m extension.plan_jobs --inputs .local-manifests/pilot_inputs.jsonl --phase determinism --out .local-determinism-jobs.jsonl
 ```
 
-`prepare`不读取生成结果来选题；只传递问题、选项和图像绑定，丢弃答案标签。
-150题450个Full旧轨迹可用于描述性基线，6750个新条件记录默认全部重跑；没有自动复用不同后端的旧生成。
+源数据适配使用显式字段映射，`source-map`格式示例见`SOURCE_MAP_FORMAT.md`。不猜测MMMU大学科、MathVerse原题ID或AI2D选项索引。数据版本、图像SHA和严格分层不够时拒绝冻结。上传仓库不包含数据/图片/答案。
 
-## GPU准备与执行
-
-1. 按锁定SHA下载作者代码到`vendor/`，不复制其整库到本仓库；保留作者许可证。使用R3同一Thinking checkpoint，`--weights-lock`指向其原始文件哈希清单。权重不下载到Git。
-2. PriorTR框架与Hi-Lo需要各自的作者依赖环境，版本见锁文件。HF基准独立进程加载原生类。二者Transformers版本不同，因此环境桥接必须实测，不能将同为SDPA理解为等价。
-3. 20道真实问题（五任务各4题）跑关闭剪枝、100%保留及压缩路径；固定前缀比较0/31/1023/4095/32766步logits。近cap前缀可以人工延长作为缓存压力诊断，但须另有自然长轨迹，二者不能混称。
-4. `r4.diagnose`接收单个label-free row/job和token数组prefix，记录logits与36层trace；`--native`是未修改HF Full，`--disabled`关闭剪枝，`--keep100`保留所有视觉token。`r4.compare`输出数值差异，不自行设容差或颁发PASS。
-5. `r4.run --diagnostic`运行完整自然32K上限；诊断与正式目录隔离。逐项核验后生成`r4.gates.CHECKS`要求的证据回执，绑定权重、代码、协议、环境和每个证据文件SHA。
+## 验证与生成
 
 ```bash
-python -m r4.run --panel .local-panel/panel.json --jobs .local-panel/jobs.json \
- --condition PriorTR25 --checkpoint /models/qwen8 --weights-lock /data/model_weights_lock.json \
- --author-root vendor/PriorTR --gate /data/measured-gate.json --out outputs/run1/PriorTR25
+# 先用独立环境加载锁定作者源代码；官方BF16权重/Tokenizer文件必须有SHA清单。
+python -m r4.fetch_sources --help
+python -m extension.run_inference --inputs .local-manifests/pilot_inputs.jsonl --jobs .local-precheck-jobs.jsonl \
+ --model qwen8 --condition Full --checkpoint /models/qwen8 --weights-lock /data/weights.json \
+ --environment-lock /data/environment.json --author-root vendor/PriorTR --diagnostic --out .local-precheck/qwen8
+python -m extension.run_inference --collect .local-precheck --out .local-precheck.jsonl
+python -m extension.evaluate_answers --records .local-precheck.jsonl --inputs .local-manifests/pilot_inputs.jsonl \
+ --labels .local-manifests/pilot_labels.jsonl --official .local-official/runtime_evaluators.json --out .local-precheck-scoring
+# 审阅所有循环预警与评分待审项，再生成两模型决策。
+python -m extension.validate_backends --records .local-precheck-scoring/scored.jsonl --manifest .local-manifests/pilot_inputs.jsonl \
+ --confirmations /data/human-loop-review.json --out .local-decisions.json
+python -m extension.plan_jobs --inputs .local-manifests/formal_inputs.jsonl --phase formal --decisions .local-decisions.json --out .local-formal-jobs.jsonl
 ```
 
-参考运行器为**单权重常驻、B1原生generate**，用于数值/机制对照，不宣称10路分页支持五种方法。正式批量提速需将各方法prefill与保留路径接入同一经过验收的分页decoder并另冻结profile；不能直接复用仅验证PriorTR的R3十路引擎。当前B1也须验收及计时后才可作为正式profile，不自动启动6750条。
+若触发采样替代，另提供绑定决策SHA的`--fallback-plan`，核心五条件三种子，其余单种子，新增9,000条/触发模型。不给回执则阻止调度，不悄悄修改主设置。
 
-## 代码入口
+正式运行命令与上面相同但移除`--diagnostic`，加`--gate`与`--decisions`，使用正式inputs/jobs；每次指定一个模型/条件，B1。门槛`identity`由实际环境、模型、源代码、协议SHA构成；`conditions[model:condition]`内必须含`extension.validate_backends.CHECKS`全部PASS、实测容差和SHA绑定证据。**代码不提供假PASS模板**。无剪枝诊断用具体方法条件加`--disabled`，Hi-Lo显式绕过选择器与融合；不得将该结果当正常压缩结果。
 
-| 模块 | 功能 |
-|---|---|
-| `prepare/core` | 确定性抽样、独立集去重、6750/5250配对任务、输入隔离 |
-| `adapters` | 固定作者FastV/PriorTR/VisPruner/SparseVLM/Hi-Lo；Random与官方像素控制；原索引与36层状态观察 |
-| `diagnose/compare/gates` | 原生/包装路径固定前缀数值证据及拒绝不完整验收 |
-| `run` | 不覆盖成功、保留失败、原前缀恢复、原token/原文/trace |
-| `annotations` | 双人证据、首次错误token位置、M120分层与不足登记 |
-| `interventions/continuation/mechanisms` | 同预算证据/随机救援、事实与中性长度匹配、精确前缀修改、Full同样停止干预及独立分支运行 |
-| `analyze` | 三重复先按题平均、图像簇bootstrap、删失不剔除、未标注不当正确 |
+目前实际长前缀logits捕获可复用`r4.diagnose.probe`/`r4.compare`函数，但必须由新两模型环境产生证据并按新门槛绑定，旧R3回执无效。方法复测使用独立repeat=0/1/2输出目录和相同seed，`--determinism`比较真实位置/序列而非只比较长度。
 
-干预组件必须由真实标注驱动；此包不自动生成“人工核验”证据。已有DeepSeek提取需另固定协议版本并抽查，抽取不能看标签，视觉事实标签不能由答案提取器替代。
+## 提取、统计、报告
 
-`python -m r4.mechanisms --help`列出分支运行入口，recipe须包含父输出SHA和真实证据；停止分支可以复用早结束输出。prefix编辑在独立目录生成`intervention_result.json`，不会混入自然主表。`r4.offline`本地合并原始token、已审提取质量和人工标签，再用`r4.analyze`统计；缺失评分/标注保持null。
+```bash
+python -m extension.fetch_evaluators --out .local-official
+python -m extension.evaluate_answers --records .local-formal.jsonl --inputs .local-manifests/formal_inputs.jsonl \
+ --labels .local-manifests/formal_labels.jsonl --official .local-official/runtime_evaluators.json --out .local-scoring
+# 完成盲审后，加--reviewed再次输出到新的目录；永不覆盖原始结果。
+python -m extension.aggregate_metrics --records .local-scoring-reviewed/scored.jsonl --inputs .local-manifests/formal_inputs.jsonl --jobs .local-formal-jobs.jsonl --out .local-metrics.json
+python -m extension.analyze_trajectories --records .local-scoring-reviewed/scored.jsonl --inputs .local-manifests/formal_inputs.jsonl --out .local-cases.json
+python -m extension.generate_report --metrics .local-metrics.json --records .local-scoring-reviewed/scored.jsonl --out reports/expansion-v1
+```
+
+推理时直接根据原始ID分区；`extension.parse_outputs`也能离线重建。MathVista/MMMU使用锁定函数；MathVerse保留官方两步来源，等待盲化人工/独立评审回执，不自动调用付费API。盲审回执映射键为blind_id，含sample_id/raw_sha256/blind=true/predicted_answer/correct/judge_type/judge_version/judge_reason；提取队列无gold和方法信息。未解决评分保持null，无答案正常运行按错计，进程失败不当答案。
+
+`results`以每job原始JSON+trace+binding+success-SHA作为不可变源，收集器校验后导出JSONL并附失败清单。前缀恢复不覆盖更长已存前缀；原失败需明确新恢复记录，不自动重抽。图表只有输入真实结果才生成，仓库里的测试夹具不代表实验发现。

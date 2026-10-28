@@ -1,0 +1,111 @@
+{
+  "dtype": "bfloat16",
+  "attention_backend": "sdpa",
+  "processor": {
+    "min_pixels": 262144,
+    "max_pixels": 4194304
+  },
+  "context_limit": 65536,
+  "max_expanded_prompt_tokens": 8192,
+  "prompt": {
+    "suffix": "\n\nAfter reasoning, end your response with one line in this exact format: FINAL ANSWER: <answer>\nGive only the requested answer after FINAL ANSWER:, without extra explanation on that final line.",
+    "multiple_choice_suffix": "For this multiple-choice question, give only the option letter after FINAL ANSWER:.",
+    "system": "native conversation template only",
+    "special_think_tags_for_llava_or_mini": false
+  },
+  "protocol": "visual-expansion-v1-20261027",
+  "models": {
+    "qwen4": {
+      "model_id": "Qwen/Qwen3-VL-4B-Thinking",
+      "revision": "1de27d8c51f12e819435303b9e84c4e25ba8401e"
+    },
+    "qwen8": {
+      "model_id": "Qwen/Qwen3-VL-8B-Thinking",
+      "revision": "92f3c4b4feadd3a016ef468d103bb5f58b2a2c6b"
+    }
+  },
+  "author_defaults": true,
+  "datasets": [
+    "ChartQA",
+    "MMMU",
+    "MathVista",
+    "MathVerse",
+    "GQA",
+    "AI2D"
+  ],
+  "formal_per_dataset": 150,
+  "pilot_per_dataset": 20,
+  "sampling_seed": 42,
+  "methods": [
+    "PriorTR",
+    "FastV",
+    "VisPruner",
+    "SparseVLM",
+    "HiLo"
+  ],
+  "retention": [
+    1,
+    0.9,
+    0.75,
+    0.5,
+    0.25,
+    0.1
+  ],
+  "main_decoding": "greedy_pending_precheck",
+  "generation": {
+    "do_sample": false,
+    "temperature": 0,
+    "num_beams": 1,
+    "num_return_sequences": 1,
+    "seed": 42,
+    "batch_size": 1,
+    "max_new_tokens": 32768,
+    "repetition_penalty": 1,
+    "presence_penalty": 0
+  },
+  "fallback": {
+    "trigger": "Full precheck cap rate >0.05 OR any human-confirmed loop",
+    "core_conditions": [
+      "Full",
+      "PriorTR50",
+      "PriorTR25",
+      "FastV50",
+      "FastV25"
+    ],
+    "core_seeds": [
+      42,
+      43,
+      44
+    ],
+    "other_seed": 42,
+    "extra_jobs_per_fallback_model": 9000,
+    "requires_bound_fallback_plan": true
+  },
+  "analysis": {
+    "bootstrap": 10000,
+    "seed": 20261027,
+    "unit": "sample_id paired within dataset",
+    "macro": "six equal-weight task CTIRs",
+    "ratio_min_full_reasoning_tokens": 32,
+    "growth_thresholds": [
+      1.5,
+      2,
+      3,
+      5
+    ],
+    "primary": [
+      "qwen4/PriorTR25",
+      "qwen4/FastV25",
+      "qwen8/PriorTR25",
+      "qwen8/FastV25"
+    ],
+    "censoring_warning_threshold": 0.02
+  },
+  "method_policy": {
+    "SparseVLM": "author VTRConfig defaults: single prune_layer=3, token_merge=False; no old three-stage override",
+    "HiLo": "official defaults candidate_ratio=.3; author internally raises candidate_count to keep_count; high retention can leave fusion set empty, report actual fusion",
+    "Full": "native HF class; pruning not instantiated",
+    "NoPruning": "disabled VTRConfig; HiLo fusion off AND omit image_tensor so selection_ready stays False"
+  },
+  "formal_ready": false
+}

@@ -1,0 +1,41 @@
+{
+  "MathVerse_extract": {
+    "repository": "ZrrSkywalker/MathVerse",
+    "revision": "937b090597aeafb8e82b35d310a4bc5b9e2ea29d",
+    "path": "evaluation/extract_answer_s1.py",
+    "sha256": "61e043aa93f8ed977bb60a1275b6f86586dd84dcae25dc898abb1bca6f89ae64",
+    "url": "https://raw.githubusercontent.com/ZrrSkywalker/MathVerse/937b090597aeafb8e82b35d310a4bc5b9e2ea29d/evaluation/extract_answer_s1.py"
+  },
+  "MathVerse_score": {
+    "repository": "ZrrSkywalker/MathVerse",
+    "revision": "937b090597aeafb8e82b35d310a4bc5b9e2ea29d",
+    "path": "evaluation/score_answer_s2.py",
+    "sha256": "463924d4b39bd0bb0af38406abeb5c0c7d99080e45729d8ac7ed8612d9479f70",
+    "url": "https://raw.githubusercontent.com/ZrrSkywalker/MathVerse/937b090597aeafb8e82b35d310a4bc5b9e2ea29d/evaluation/score_answer_s2.py"
+  },
+  "MMMU": {
+    "repository": "MMMU-Benchmark/MMMU",
+    "revision": "51ce7f3e829c16bb44bc5445782686b4c3508794",
+    "path": "eval/eval_utils.py",
+    "sha256": "cc1a89b4a27f697702d340bc6a7578b5237135754ddaa9ef105239a3d9847367",
+    "functions": [
+      "check_is_number",
+      "normalize_str",
+      "extract_numbers",
+      "parse_open_response",
+      "eval_multi_choice",
+      "eval_open"
+    ]
+  },
+  "MathVista": {
+    "repository": "lupantech/MathVista",
+    "revision": "c5acd37d75a8c8f9756cb66c78fe2e54fa2c31fb",
+    "path": "evaluation/calculate_score.py",
+    "sha256": "e81758991898308c415ea6575a11b9e5fe92444b9d19cd52d098655ffd8ede28",
+    "functions": [
+      "get_most_similar",
+      "normalize_extracted_answer",
+      "safe_equal"
+    ]
+  }
+}

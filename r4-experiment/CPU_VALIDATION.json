@@ -1,14 +1,25 @@
 {
-  "cpu_tests": 29,
+  "date": "2026-10-28",
+  "protocol": "visual-expansion-v1-20261027",
+  "cpu_tests": 66,
   "failures": 0,
   "errors": 0,
   "all_python_compiles": true,
-  "pinned_author_config_cases": 20,
-  "code_sha256": "005401e0ec521a8f70b26329df8e48d60b3e9f9e06c92909bba549510f20eebb",
+  "author_config_cases": 20,
+  "official_functions_smoke": [
+    "MMMU",
+    "MathVista"
+  ],
+  "synthetic_pipeline_tasks": 6,
+  "synthetic_plot_families": 8,
+  "code_sha256": "fee1c2b89d997d3ff22e1ee0cad04c4c292033e03ae7d46cef9c928064bc94ea",
+  "formal_matrix": 46800,
+  "pilot_matrix": 3840,
+  "robustness_matrix": 3600,
+  "determinism_matrix": 900,
+  "arithmetic_correction": "2*2*60*5*3 = 3600, not 1800",
   "gpu_tests_executed": false,
+  "real_manifests_frozen": false,
   "formal_ready": false,
-  "discovery_questions": 150,
-  "old_full_review_records": 450,
-  "planned_r4_1_records": 6750,
-  "scope": "CPU protocol/config tests only; GPU correctness, performance and human annotation remain pending"
+  "scope": "CPU and synthetic fixtures only; no new research generation or paid evaluation"
 }

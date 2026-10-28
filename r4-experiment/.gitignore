@@ -8,3 +8,8 @@ outputs/
 *.safetensors
 .env*
 config.txt
+
+.local*
+reports/
+results/
+manifests/
